@@ -1,6 +1,10 @@
 // 设置离线模式，使用模拟数据
 window.isOfflineMode = false; // 设置为false，从API获取实际数据
 
+// API配置
+const API_BASE_URL = 'http://localhost:3000'; // 开发环境
+// const API_BASE_URL = 'https://your-domain.com'; // 生产环境 - 部署时修改为实际地址
+
 // 添加顶级样式，确保导航按钮总是可见
 const topLevelStyle = document.createElement('style');
 topLevelStyle.textContent = `
@@ -202,6 +206,12 @@ function initChapterModal() {
         form.querySelectorAll('input[type="text"], textarea').forEach(input => {
             input.value = '';
         });
+        
+        // 重置图片预览
+        const filePreview = modal.querySelector('.file-preview');
+        if (filePreview) {
+            filePreview.innerHTML = '';
+        }
     }
     
     closeBtn.addEventListener('click', closeModal);
@@ -237,7 +247,11 @@ function initChapterModal() {
             }
             
             try {
-                // 创建要发送的数据对象 - 只包含数据库表中存在的字段
+                // 显示加载状态
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="zh">保存中...</span><span class="en">Saving...</span>';
+                
+                // 创建要发送的数据对象
                 const chapterData = {
                     chapter_number: parseInt(chapterNumber),
                     title_zh: titleZh,
@@ -245,25 +259,55 @@ function initChapterModal() {
                     description_zh: descriptionZh,
                     description_en: descriptionEn,
                     is_published: isPublished,
-                    order_index: parseInt(chapterNumber) // 默认使用章节编号作为排序索引
+                    order_index: parseInt(chapterNumber)
                 };
                 
                 // 处理封面图片
                 const fileInput = document.getElementById('coverImage');
+                let imageUploadPromise = Promise.resolve();
+                
                 if (fileInput && fileInput.files && fileInput.files[0]) {
-                    // 这里应该上传图片到服务器
-                    // 简单起见，我们使用默认图片路径
+                    const file = fileInput.files[0];
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    // 先上传图片
+                    imageUploadPromise = fetch(`${API_BASE_URL}/api/upload/image`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('图片上传失败');
+                        }
+                        return response.json();
+                    })
+                    .then(result => {
+                        // 将返回的图片路径添加到章节数据中
+                        if (result.code === 200 && result.data && result.data.url) {
+                            chapterData.cover_image = result.data.url;
+                        } else {
+                            // 如果服务器没有返回图片路径，使用默认图片
+                            chapterData.cover_image = '../picture/banner.jpg';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('上传图片时出错:', error);
+                        // 出错时使用默认图片
+                        chapterData.cover_image = '../picture/banner.jpg';
+                    });
+                } else {
+                    // 如果没有选择图片，使用默认图片
                     chapterData.cover_image = '../picture/banner.jpg';
                 }
                 
-                // 显示加载状态
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="zh">保存中...</span><span class="en">Saving...</span>';
+                // 等待图片上传完成
+                await imageUploadPromise;
                 
                 console.log('发送章节数据:', chapterData);
                 
                 // 发送API请求保存章节数据
-                const response = await fetch('http://localhost:3000/api/chapters', {
+                const response = await fetch(`${API_BASE_URL}/api/chapters`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -742,7 +786,7 @@ function loadChapters() {
     }
     
     // 调用API获取章节数据
-    fetch('http://localhost:3000/api/chapters')
+    fetch(`${API_BASE_URL}/api/chapters`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -782,7 +826,7 @@ function loadChapters() {
  */
 function updateChapterStats() {
     // 获取章节统计数据
-    fetch('http://localhost:3000/api/chapters/stats')
+    fetch(`${API_BASE_URL}/api/chapters/stats`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
