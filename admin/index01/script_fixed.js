@@ -974,57 +974,68 @@ function renderChapters(chapters) {
                 }
             }
             
-            // 获取文件数量
-            const fileCount = chapter.file_count || Math.floor(Math.random() * 10) + 1;
-            const fileCountStr = `${fileCount} 文件`;
-            
             // 创建章节卡片
             const card = document.createElement('div');
             card.className = 'chapter-card';
             card.setAttribute('data-id', chapterId);
             
             // 设置卡片内容 - 按照新样式报告的HTML结构
-        card.innerHTML = `
+            // 增加卡片宽度和上下间距的样式
+            card.style.width = '350px';
+            card.style.marginBottom = '20px';
+            card.style.padding = '15px';
+            
+            // 确保章节标题中包含"第X章："的格式
+            let formattedTitleZh = titleZh;
+            let formattedTitleEn = titleEn;
+            
+            // 如果标题中没有包含"第X章"格式，添加上去
+            if (!formattedTitleZh.match(/^第\d+章[：:]/) && chapterNumber) {
+                formattedTitleZh = `第${chapterNumber}章：${formattedTitleZh.replace(/^第\d+章\s*/, '')}`;
+            }
+            
+            // 如果标题中没有包含"Chapter X"格式，添加上去
+            if (!formattedTitleEn.match(/^Chapter\s+\d+[：:]/i) && chapterNumber) {
+                formattedTitleEn = `Chapter ${chapterNumber}: ${formattedTitleEn.replace(/^Chapter\s+\d+\s*/, '')}`;
+            }
+            
+            card.innerHTML = `
                 <div class="chapter-cover">
-                    <img src="${imagePath}" alt="${titleZh}" onerror="this.src='../picture/banner.jpg'" class="chapter-img">
-            <div class="chapter-actions">
+                    <img src="${imagePath}" alt="${formattedTitleZh}" onerror="this.src='../picture/banner.jpg'" class="chapter-img">
+                    <div class="chapter-actions">
                         <button class="chapter-action-btn edit" title="编辑章节" data-id="${chapterId}">
-                    <i class="fas fa-edit"></i>
-                </button>
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <button class="chapter-action-btn prepare" title="备课" data-id="${chapterId}">
                             <i class="fas fa-magic"></i>
-                </button>
+                        </button>
                         <button class="chapter-action-btn teach" title="上课" data-id="${chapterId}">
-                    <i class="fas fa-chalkboard-teacher"></i>
-                </button>
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="chapter-info">
-                    <h3 class="chapter-title zh">${titleZh}</h3>
-                    <h3 class="chapter-title en">${titleEn}</h3>
+                    <h3 class="chapter-title zh">${formattedTitleZh}</h3>
+                    <h3 class="chapter-title en">${formattedTitleEn}</h3>
                     <p class="chapter-desc zh">${descriptionZh}</p>
                     <p class="chapter-desc en">${descriptionEn}</p>
-                    <div class="chapter-meta">
+                    <div class="chapter-meta" style="overflow: visible; white-space: nowrap; margin-top: 10px; margin-bottom: 5px;">
                         <div class="meta-item">
                             <i class="far fa-clock"></i>
-                            <span class="zh">${updateTimeStr}</span>
-                            <span class="en">Updated recently</span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="far fa-file-alt"></i>
-                            <span>${fileCountStr}</span>
+                            <span class="zh" style="display: inline-block;">${updateTimeStr}</span>
+                            <span class="en" style="display: inline-block;">Updated recently</span>
                         </div>
                     </div>
-            </div>
-        `;
+                </div>
+            `;
         
             // 将卡片添加到容器
-        chaptersContainer.appendChild(card);
-            console.log(`已渲染章节 ${index + 1}/${chapters.length}: ${titleZh}`);
-    });
+            chaptersContainer.appendChild(card);
+            console.log(`已渲染章节 ${index + 1}/${chapters.length}: ${formattedTitleZh}`);
+        });
     
-    // 初始化章节卡片交互
-    initChapterCards();
+        // 初始化章节卡片交互
+        initChapterCards();
     
         console.log('章节渲染完成');
     } catch (error) {
