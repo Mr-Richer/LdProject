@@ -1,0 +1,41 @@
+import { HealthModule } from './modules/health/health.module';
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './modules/auth/auth.module';
+import { ChaptersModule } from './modules/chapters/chapters.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { AdminModule } from './modules/admin/admin.module';
+
+@Module({
+  imports: [
+    // 配置模块
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    
+    // 数据库连接
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get<number>('DB_PORT', 3306),
+        username: configService.get('DB_USERNAME', 'root'),
+        password: configService.get('DB_PASSWORD', 'root'),
+        database: configService.get('DB_DATABASE', 'chinese_culture_course'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
+      }),
+    }),
+    
+    // 功能模块
+    AuthModule,
+    ChaptersModule,
+    UploadModule,
+    AdminModule,
+  ],
+})
+export class AppModule {} 
