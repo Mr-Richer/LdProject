@@ -91,6 +91,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 加载课程章节数据
     loadChapters();
     
+    // 初始化章节选择器
+    initChapterSelector();
+    
     console.log('页面功能初始化完成');
 });
 
@@ -412,13 +415,45 @@ function initChapterCards() {
             const card = this.closest('.chapter-card');
             const chapterTitle = card.querySelector('.chapter-title.zh').textContent;
             
+            // 从章节卡片中提取章节编号
+            const chapterNumberMatch = chapterTitle.match(/第(\d+)章/);
+            const chapterNumber = chapterNumberMatch ? chapterNumberMatch[1] : null;
+            
             // 切换到AI助教-课前界面
             const aiPreNavItem = document.querySelector('.nav-item[data-section="ai-pre"]');
             if (aiPreNavItem) {
+                // 先切换到课前界面
                 aiPreNavItem.click();
+                
+                // 设置延时，等待页面切换完成
+                setTimeout(() => {
+                    // 查找章节选择器
+                    const chapterSelect = document.getElementById('chapter-select');
+                    if (chapterSelect && chapterNumber) {
+                        // 根据当前语言模式选择对应的选项
+                        const isEnMode = document.body.classList.contains('en-mode');
+                        const selector = isEnMode ? `option.en[value="${chapterNumber}"]` : `option.zh[value="${chapterNumber}"]`;
+                        const option = chapterSelect.querySelector(selector);
+                        
+                        if (option) {
+                            // 设置选中的章节
+                            option.selected = true;
+                            
+                            // 触发change事件
+                            const event = new Event('change');
+                            chapterSelect.dispatchEvent(event);
+                            
+                            console.log(`已选择章节 ${chapterNumber}`);
+                        } else {
+                            console.error(`未找到章节选项: ${chapterNumber}`);
+                        }
+                    } else {
+                        console.error('未找到章节选择器或章节编号无效');
+                    }
+                }, 300); // 等待300毫秒，确保页面切换完成
             }
             
-            console.log('备课:', chapterTitle, '(ID:', chapterId, ')');
+            console.log('备课:', chapterTitle, '(ID:', chapterId, ', 章节编号:', chapterNumber, ')');
             showNotification(`已切换到${chapterTitle}的备课界面`, 'success');
         });
     });
@@ -979,7 +1014,7 @@ function renderChapters(chapters) {
             
             card.innerHTML = `
                 <div class="chapter-cover">
-                    <img src="${imagePath}" alt="${formattedTitleZh}" onerror="this.src='../picture/banner.jpg'" class="chapter-img">
+                    <img src="${processImageUrl(imagePath)}" alt="${formattedTitleZh}" onerror="this.src='../picture/banner.jpg'" class="chapter-img">
                     <div class="chapter-actions">
                         <button class="chapter-action-btn edit" title="编辑章节" data-id="${chapterId}">
                             <i class="fas fa-edit"></i>
@@ -1214,4 +1249,174 @@ highlightStyle.textContent = `
         z-index: 10;
     }
 `;
-document.head.appendChild(highlightStyle); 
+document.head.appendChild(highlightStyle);
+
+/**
+ * 处理图片URL，确保URL格式正确
+ * @param {string} url - 原始URL
+ * @return {string} - 处理后的URL
+ */
+function processImageUrl(url) {
+    if (!url) return '../picture/banner.jpg';
+    
+    // 如果是完整的URL(http://或https://开头)，直接返回
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+    
+    // 如果是以/开头的绝对路径，添加API基础URL
+    if (url.startsWith('/')) {
+        // 去掉API_BASE_URL结尾的斜杠(如果有)
+        const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+        return `${baseUrl}${url}`;
+    }
+    
+    // 其他情况保持原样(相对路径)
+    return url;
+}
+
+/**
+ * 初始化章节选择器
+ */
+function initChapterSelector() {
+    const chapterSelect = document.getElementById('chapter-select');
+    if (!chapterSelect) {
+        console.error('章节选择器元素未找到');
+        return;
+    }
+    
+    console.log('开始初始化章节选择器...');
+    
+    // 显示加载中状态
+    chapterSelect.innerHTML = '<option disabled selected>加载中...</option>';
+    
+    // 获取章节数据
+    fetch(`${API_BASE_URL}/api/chapters`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.code === 200 && result.data && result.data.chapters && result.data.chapters.length > 0) {
+                // 清空现有选项
+                chapterSelect.innerHTML = '';
+                
+                // 按章节编号排序
+                const sortedChapters = result.data.chapters.sort((a, b) => 
+                    a.chapter_number - b.chapter_number
+                );
+                
+                // 添加章节选项
+                sortedChapters.forEach(chapter => {
+                    // 添加中文选项
+                    const optionZh = document.createElement('option');
+                    optionZh.value = chapter.chapter_number;
+                    optionZh.textContent = `第${chapter.chapter_number}章：${chapter.title_zh || ''}`;
+                    optionZh.classList.add('zh');
+                    chapterSelect.appendChild(optionZh);
+                    
+                    // 添加英文选项
+                    const optionEn = document.createElement('option');
+                    optionEn.value = chapter.chapter_number;
+                    optionEn.textContent = `Chapter ${chapter.chapter_number}: ${chapter.title_en || ''}`;
+                    optionEn.classList.add('en');
+                    chapterSelect.appendChild(optionEn);
+                });
+                
+                console.log('章节选择器初始化完成');
+                
+                // 添加选择器变更事件
+                addChapterSelectChangeEvent(chapterSelect);
+                
+                // 选择第一个章节（如果没有预选）
+                if (document.body.classList.contains('en-mode')) {
+                    // 英文模式下选择第一个英文选项
+                    const firstEnOption = chapterSelect.querySelector('option.en');
+                    if (firstEnOption) firstEnOption.selected = true;
+                } else {
+                    // 中文模式下选择第一个中文选项
+                    const firstZhOption = chapterSelect.querySelector('option.zh');
+                    if (firstZhOption) firstZhOption.selected = true;
+                }
+                
+                // 触发change事件，初始化内容
+                const event = new Event('change');
+                chapterSelect.dispatchEvent(event);
+            } else {
+                // 没有数据时显示提示
+                chapterSelect.innerHTML = '<option disabled selected class="zh">暂无章节数据</option><option disabled selected class="en">No chapters available</option>';
+                console.error('未获取到章节数据');
+                showNotification('未能获取章节数据，请检查网络连接或联系管理员', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('获取章节数据出错:', error);
+            chapterSelect.innerHTML = '<option disabled selected class="zh">获取数据失败</option><option disabled selected class="en">Failed to load data</option>';
+            showNotification('获取章节数据失败: ' + error.message, 'error');
+        });
+}
+
+/**
+ * 为章节选择器添加变更事件
+ * @param {HTMLSelectElement} chapterSelect - 章节选择器元素
+ */
+function addChapterSelectChangeEvent(chapterSelect) {
+    // 存储章节中英文名称的映射
+    const chapterTitles = {};
+    
+    // 处理所有章节选项，建立章节号与标题的映射
+    for (let i = 0; i < chapterSelect.options.length; i++) {
+        const option = chapterSelect.options[i];
+        const value = option.value;
+        
+        if (value && option.classList.contains('zh')) {
+            // 保存中文标题
+            chapterTitles[value] = option.textContent;
+        }
+    }
+    
+    // 移除现有的事件监听器（如果有的话）
+    chapterSelect.removeEventListener('change', chapterSelectChangeHandler);
+    
+    // 添加新的事件监听器
+    chapterSelect.addEventListener('change', chapterSelectChangeHandler);
+    
+    // 章节选择器变更事件处理函数
+    function chapterSelectChangeHandler() {
+        const chapterNumber = this.value;
+        
+        if (chapterNumber && chapterTitles[chapterNumber]) {
+            const chapterTitle = chapterTitles[chapterNumber];
+            
+            // 更新界面显示
+            updateAIPreContent(chapterNumber, chapterTitle);
+            
+            // 显示通知
+            showNotification(`已切换到${chapterTitle}`, 'info');
+        }
+    }
+}
+
+/**
+ * 更新AI课前内容区域
+ * @param {string} chapterNumber - 章节编号
+ * @param {string} chapterTitle - 章节标题
+ */
+function updateAIPreContent(chapterNumber, chapterTitle) {
+    // 更新标题显示
+    const titleElements = document.querySelectorAll('.ai-pre-container .section-header h2');
+    if (titleElements.length > 0) {
+        titleElements.forEach(element => {
+            if (element.classList.contains('zh')) {
+                element.textContent = `章节备课: ${chapterTitle}`;
+            } else if (element.classList.contains('en')) {
+                element.textContent = `Chapter Preparation: ${chapterNumber}`;
+            }
+        });
+    }
+    
+    // 可以在这里添加更多内容更新逻辑
+    console.log(`正在加载章节 ${chapterNumber} 的课前内容`);
+} 
