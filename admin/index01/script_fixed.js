@@ -291,6 +291,9 @@ function initChapterModal() {
                 // 重新加载章节列表并在加载完成后滚动到新章节位置
                 await loadChaptersAndScrollToNew(createdChapterNumber);
                 
+                // 更新章节统计数据
+                updateChapterStats();
+                
             } catch (error) {
                 console.error('保存章节时出错:', error);
                 showNotification(`保存失败: ${error.message}`, 'error');
@@ -719,200 +722,97 @@ function animateContentChange(element) {
 }
 
 /**
- * 加载课程章节数据
- * 在离线模式下使用模拟数据，在线模式尝试从API获取
+ * 加载章节数据
  */
 function loadChapters() {
-    console.log('开始加载课程章节数据...');
+    console.log('开始加载章节数据...');
     
     const chaptersContainer = document.getElementById('chaptersContainer');
     const loadingIndicator = document.getElementById('chaptersLoading');
     
     if (!chaptersContainer) {
-        console.error('找不到章节容器：#chaptersContainer');
-        // 尝试在DOM中创建章节容器
-        const chaptersSection = document.querySelector('.chapters-section');
-        if (chaptersSection) {
-            const newContainer = document.createElement('div');
-            newContainer.className = 'chapters-container';
-            newContainer.id = 'chaptersContainer';
-            
-            // 添加加载指示器
-            const newLoadingIndicator = document.createElement('div');
-            newLoadingIndicator.className = 'loading-indicator';
-            newLoadingIndicator.id = 'chaptersLoading';
-            newLoadingIndicator.innerHTML = `
-                <div class="spinner"></div>
-                <p class="zh">加载章节中...</p>
-                <p class="en">Loading chapters...</p>
-            `;
-            
-            newContainer.appendChild(newLoadingIndicator);
-            
-            // 查找合适的位置插入
-            const prevBtn = chaptersSection.querySelector('.chapter-nav-btn.prev-btn');
-            const nextBtn = chaptersSection.querySelector('.chapter-nav-btn.next-btn');
-            
-            if (prevBtn && nextBtn) {
-                chaptersSection.insertBefore(newContainer, nextBtn);
-                console.log('成功创建章节容器');
-                // 重新获取引用
-                return setTimeout(() => loadChapters(), 100);
-            }
-        }
+        console.error('找不到章节容器元素 #chaptersContainer');
         return;
     }
     
-    console.log('已找到章节容器，继续加载...');
-    
-    // 显示加载指示器
-    if (loadingIndicator) {
+    if (!loadingIndicator) {
+        console.warn('找不到加载指示器元素 #chaptersLoading');
+    } else {
         loadingIndicator.style.display = 'flex';
     }
     
-    // 从API获取数据
-    console.log('尝试从API获取章节数据');
-    
-    // 设置请求超时
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-    
-    // 使用实际数据库API地址
-    const apiUrl = 'http://localhost:3000/api/chapters';
-    
-    fetch(apiUrl, { 
-        signal: controller.signal,
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        clearTimeout(timeoutId);
-        if (!response.ok) {
-            throw new Error('获取章节列表失败: ' + response.status);
-        }
-        console.log('API响应状态码:', response.status);
-        return response.json();
-    })
-    .then(data => {
-        console.log('成功获取章节数据 (原始格式):', data);
-        
-        // 根据您的数据库结构，适配数据格式
-        let chaptersData;
-        
-        try {
-            if (Array.isArray(data)) {
-                // 直接返回数组格式
-                console.log('数据格式: 数组');
-                chaptersData = data;
-            } else if (data.data && Array.isArray(data.data)) {
-                // { data: [...] } 格式
-                console.log('数据格式: { data: [...] }');
-                chaptersData = data.data;
-            } else if (data.data && data.data.chapters && Array.isArray(data.data.chapters)) {
-                // { data: { chapters: [...] } } 格式
-                console.log('数据格式: { data: { chapters: [...] } }');
-                chaptersData = data.data.chapters;
-            } else if (data.chapters && Array.isArray(data.chapters)) {
-                // { chapters: [...] } 格式
-                console.log('数据格式: { chapters: [...] }');
-                chaptersData = data.chapters;
-            } else if (data.code === 200 && data.data && Array.isArray(data.data)) {
-                // { code: 200, data: [...] } 格式
-                console.log('数据格式: { code: 200, data: [...] }');
-                chaptersData = data.data;
-            } else if (data.code === 200 && data.data && data.data.chapters && Array.isArray(data.data.chapters)) {
-                // { code: 200, data: { chapters: [...] } } 格式
-                console.log('数据格式: { code: 200, data: { chapters: [...] } }');
-                chaptersData = data.data.chapters;
+    // 调用API获取章节数据
+    fetch('http://localhost:3000/api/chapters')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('成功获取章节数据:', data);
+            
+            if (data.code === 200 && data.data && data.data.chapters) {
+                // 渲染章节卡片
+                renderChapters(data.data.chapters);
             } else {
-                // 尝试查找嵌套属性中的数组
-                console.log('尝试查找嵌套属性中的数组');
-                const findArrayInObject = (obj, depth = 0) => {
-                    if (depth > 3) return null; // 防止过深递归
-                    if (!obj || typeof obj !== 'object') return null;
-                    
-                    // 直接检查当前对象的属性
-                    for (const key in obj) {
-                        if (Array.isArray(obj[key])) {
-                            console.log(`在属性 ${key} 中找到数组`);
-                            return obj[key];
-                        }
-                    }
-                    
-                    // 递归检查嵌套对象
-                    for (const key in obj) {
-                        if (obj[key] && typeof obj[key] === 'object') {
-                            const result = findArrayInObject(obj[key], depth + 1);
-                            if (result) return result;
-                        }
-                    }
-                    
-                    return null;
-                };
+                throw new Error(data.message || '获取章节数据失败，返回的数据结构不正确');
+            }
+            
+            // 更新章节统计数据
+            updateChapterStats();
+        })
+        .catch(error => {
+            console.error('加载章节数据失败:', error);
+            
+            if (loadingIndicator) {
+                loadingIndicator.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p class="zh">加载失败: ${error.message}</p>
+                        <p class="en">Loading failed: ${error.message}</p>
+                    </div>
+                `;
+            }
+        });
+}
+
+/**
+ * 从数据库获取章节统计数据并更新UI
+ */
+function updateChapterStats() {
+    // 获取章节统计数据
+    fetch('http://localhost:3000/api/chapters/stats')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.code === 200 && result.data) {
+                // 更新章节数量显示
+                const chapterCountElement = document.querySelector('.stat-card:nth-child(1) .stat-value');
+                if (chapterCountElement) {
+                    chapterCountElement.textContent = result.data.total;
+                }
                 
-                const arrayFound = findArrayInObject(data);
-                if (arrayFound && arrayFound.length > 0) {
-                    console.log('在嵌套属性中找到数组');
-                    chaptersData = arrayFound;
-                } else {
-                    console.error('数据结构:', JSON.stringify(data));
-                    throw new Error('无法识别的数据格式');
+                // 更新新增数量显示
+                const chapterChangeElement = document.querySelector('.stat-card:nth-child(1) .stat-change');
+                if (chapterChangeElement && result.data.newToday > 0) {
+                    chapterChangeElement.style.display = 'flex';
+                    const countSpan = chapterChangeElement.querySelector('span');
+                    if (countSpan) {
+                        countSpan.textContent = `+${result.data.newToday}`;
+                    }
+                } else if (chapterChangeElement) {
+                    chapterChangeElement.style.display = 'none';
                 }
             }
-            
-            console.log('解析后的章节数据:', chaptersData);
-            
-            if (chaptersData && chaptersData.length > 0) {
-                renderChapters(chaptersData);
-            } else {
-                console.error('没有找到有效的章节数据');
-                showEmptyState();
-            }
-        } catch (error) {
-            console.error('解析数据时出错:', error);
-            showEmptyState();
-        }
-    })
-    .catch(error => {
-        console.error('加载章节数据出错:', error);
-        
-        // 显示错误状态
-        showEmptyState(error.message);
-        
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'none';
-        }
-    });
-    
-    // 绑定章节导航按钮事件
-    const prevBtn = document.querySelector('.chapter-nav-btn.prev-btn');
-    const nextBtn = document.querySelector('.chapter-nav-btn.next-btn');
-    
-    if (prevBtn && nextBtn) {
-        prevBtn.addEventListener('click', () => {
-            chaptersContainer.scrollBy({ left: -350, behavior: 'smooth' });
+        })
+        .catch(error => {
+            console.error('获取章节统计数据失败:', error);
         });
-        
-        nextBtn.addEventListener('click', () => {
-            chaptersContainer.scrollBy({ left: 350, behavior: 'smooth' });
-        });
-    }
-
-    // 显示空状态或错误状态
-    function showEmptyState(errorMessage) {
-        if (!chaptersContainer) return;
-        
-        chaptersContainer.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-circle"></i>
-                <p class="zh">暂无章节数据</p>
-                <p class="en">No chapters available</p>
-                ${errorMessage ? `<p class="error-details">${errorMessage}</p>` : ''}
-            </div>
-        `;
-    }
 }
 
 /**
