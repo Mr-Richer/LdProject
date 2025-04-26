@@ -166,21 +166,107 @@ function initChapterModal() {
         }
     });
     
-    // 确认按钮
+    // 确认按钮 - 将数据保存到数据库
     confirmBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // 模拟创建章节
-            const titleInputZh = modal.querySelector('.form-input.zh');
-            const titleInputEn = modal.querySelector('.form-input.en');
+        btn.addEventListener('click', async () => {
+            const form = document.getElementById('newChapterForm');
             
-            if (titleInputZh.value.trim() !== '' || titleInputEn.value.trim() !== '') {
+            // 获取表单数据
+            const chapterNumber = document.getElementById('chapterNumber').value.trim();
+            const titleZh = document.getElementById('titleZh').value.trim();
+            const titleEn = document.getElementById('titleEn').value.trim();
+            const descriptionZh = document.getElementById('descriptionZh').value.trim();
+            const descriptionEn = document.getElementById('descriptionEn').value.trim();
+            const isPublished = document.getElementById('isPublished').checked;
+            
+            // 验证必填字段
+            if (!chapterNumber || !titleZh || !titleEn) {
+                showNotification('请填写必填字段（章节编号和标题）', 'warning');
+                return;
+            }
+            
+            try {
+                // 创建要发送的数据对象 - 只包含数据库表中存在的字段
+                const chapterData = {
+                    chapter_number: parseInt(chapterNumber),
+                    title_zh: titleZh,
+                    title_en: titleEn,
+                    description_zh: descriptionZh,
+                    description_en: descriptionEn,
+                    is_published: isPublished,
+                    order_index: parseInt(chapterNumber) // 默认使用章节编号作为排序索引
+                };
+                
+                // 处理封面图片
+                const fileInput = document.getElementById('coverImage');
+                if (fileInput && fileInput.files && fileInput.files[0]) {
+                    // 这里应该上传图片到服务器
+                    // 简单起见，我们使用默认图片路径
+                    chapterData.cover_image = '../picture/banner.jpg';
+                }
+                
+                // 显示加载状态
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="zh">保存中...</span><span class="en">Saving...</span>';
+                
+                console.log('发送章节数据:', chapterData);
+                
+                // 发送API请求保存章节数据
+                const response = await fetch('http://localhost:3000/api/chapters', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(chapterData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `API错误: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('章节保存成功:', result);
+                
+                // 显示成功消息
                 showNotification('章节创建成功！', 'success');
+                
+                // 关闭模态框
                 closeModal();
-            } else {
-                showNotification('请填写章节标题', 'warning');
+                
+                // 保存创建的章节编号，用于后续定位
+                const createdChapterNumber = parseInt(chapterNumber);
+                
+                // 重新加载章节列表并在加载完成后滚动到新章节位置
+                await loadChaptersAndScrollToNew(createdChapterNumber);
+                
+            } catch (error) {
+                console.error('保存章节时出错:', error);
+                showNotification(`保存失败: ${error.message}`, 'error');
+            } finally {
+                // 恢复按钮状态
+                btn.disabled = false;
+                btn.innerHTML = '<span class="zh">保存</span><span class="en">Save</span>';
             }
         });
     });
+    
+    // 文件上传预览
+    const fileInput = document.getElementById('coverImage');
+    const filePreview = modal.querySelector('.file-preview');
+    
+    if (fileInput && filePreview) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    filePreview.innerHTML = `<img src="${event.target.result}" alt="封面预览" class="preview-img">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
 }
 
 /**
@@ -587,12 +673,6 @@ function animateContentChange(element) {
  */
 function loadChapters() {
     console.log('开始加载课程章节数据...');
-
-    // 确保离线模式已设置
-    if (typeof window.isOfflineMode === 'undefined') {
-        console.log('离线模式未设置，设置为默认值 false');
-        window.isOfflineMode = false; // 默认使用在线模式获取实际数据
-    }
     
     const chaptersContainer = document.getElementById('chaptersContainer');
     const loadingIndicator = document.getElementById('chaptersLoading');
@@ -639,15 +719,7 @@ function loadChapters() {
         loadingIndicator.style.display = 'flex';
     }
     
-    // 检查是否处于离线模式
-    if (window.isOfflineMode) {
-        // 离线模式：使用模拟数据
-        console.log('使用离线模式加载章节数据');
-        setTimeout(() => renderChapters(getMockChapters()), 800);
-        return; // 直接返回，不继续尝试API调用
-    }
-    
-    // 在线模式：尝试从API获取数据
+    // 从API获取数据
     console.log('尝试从API获取章节数据');
     
     // 设置请求超时
@@ -664,94 +736,79 @@ function loadChapters() {
             'Content-Type': 'application/json'
         }
     })
-        .then(response => {
-            clearTimeout(timeoutId);
-            if (!response.ok) {
-                throw new Error('获取章节列表失败: ' + response.status);
-            }
-            console.log('API响应状态码:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('成功获取章节数据 (原始格式):', data);
-            
-            // 根据您的数据库结构，适配数据格式
-            let chaptersData;
-            
-            try {
-                if (Array.isArray(data)) {
-                    // 直接返回数组格式
-                    console.log('数据格式: 数组');
-                    chaptersData = data;
-                } else if (data.data && Array.isArray(data.data)) {
-                    // { data: [...] } 格式
-                    console.log('数据格式: { data: [...] }');
-                    chaptersData = data.data;
-                } else if (data.data && data.data.chapters && Array.isArray(data.data.chapters)) {
-                    // { data: { chapters: [...] } } 格式
-                    console.log('数据格式: { data: { chapters: [...] } }');
-                    chaptersData = data.data.chapters;
-                } else if (data.chapters && Array.isArray(data.chapters)) {
-                    // { chapters: [...] } 格式
-                    console.log('数据格式: { chapters: [...] }');
-                    chaptersData = data.chapters;
-                } else if (data.code === 200 && data.data && Array.isArray(data.data)) {
-                    // { code: 200, data: [...] } 格式
-                    console.log('数据格式: { code: 200, data: [...] }');
-                    chaptersData = data.data;
-                } else if (data.code === 200 && data.data && data.data.chapters && Array.isArray(data.data.chapters)) {
-                    // { code: 200, data: { chapters: [...] } } 格式
-                    console.log('数据格式: { code: 200, data: { chapters: [...] } }');
-                    chaptersData = data.data.chapters;
-                } else {
-                    // 尝试查找嵌套属性中的数组
-                    console.log('尝试查找嵌套属性中的数组');
-                    const findArrayInObject = (obj, depth = 0) => {
-                        if (depth > 3) return null; // 防止过深递归
-                        if (!obj || typeof obj !== 'object') return null;
-                        
-                        // 直接检查当前对象的属性
-                        for (const key in obj) {
-                            if (Array.isArray(obj[key])) {
-                                console.log(`在属性 ${key} 中找到数组`);
-                                return obj[key];
-                            }
-                        }
-                        
-                        // 递归检查嵌套对象
-                        for (const key in obj) {
-                            if (obj[key] && typeof obj[key] === 'object') {
-                                const result = findArrayInObject(obj[key], depth + 1);
-                                if (result) return result;
-                            }
-                        }
-                        
-                        return null;
-                    };
+    .then(response => {
+        clearTimeout(timeoutId);
+        if (!response.ok) {
+            throw new Error('获取章节列表失败: ' + response.status);
+        }
+        console.log('API响应状态码:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('成功获取章节数据 (原始格式):', data);
+        
+        // 根据您的数据库结构，适配数据格式
+        let chaptersData;
+        
+        try {
+            if (Array.isArray(data)) {
+                // 直接返回数组格式
+                console.log('数据格式: 数组');
+                chaptersData = data;
+            } else if (data.data && Array.isArray(data.data)) {
+                // { data: [...] } 格式
+                console.log('数据格式: { data: [...] }');
+                chaptersData = data.data;
+            } else if (data.data && data.data.chapters && Array.isArray(data.data.chapters)) {
+                // { data: { chapters: [...] } } 格式
+                console.log('数据格式: { data: { chapters: [...] } }');
+                chaptersData = data.data.chapters;
+            } else if (data.chapters && Array.isArray(data.chapters)) {
+                // { chapters: [...] } 格式
+                console.log('数据格式: { chapters: [...] }');
+                chaptersData = data.chapters;
+            } else if (data.code === 200 && data.data && Array.isArray(data.data)) {
+                // { code: 200, data: [...] } 格式
+                console.log('数据格式: { code: 200, data: [...] }');
+                chaptersData = data.data;
+            } else if (data.code === 200 && data.data && data.data.chapters && Array.isArray(data.data.chapters)) {
+                // { code: 200, data: { chapters: [...] } } 格式
+                console.log('数据格式: { code: 200, data: { chapters: [...] } }');
+                chaptersData = data.data.chapters;
+            } else {
+                // 尝试查找嵌套属性中的数组
+                console.log('尝试查找嵌套属性中的数组');
+                const findArrayInObject = (obj, depth = 0) => {
+                    if (depth > 3) return null; // 防止过深递归
+                    if (!obj || typeof obj !== 'object') return null;
                     
-                    const arrayFound = findArrayInObject(data);
-                    if (arrayFound && arrayFound.length > 0) {
-                        console.log('在嵌套属性中找到数组');
-                        chaptersData = arrayFound;
-                    } else {
-                        console.error('数据结构:', JSON.stringify(data));
-                        throw new Error('无法识别的数据格式');
+                    // 直接检查当前对象的属性
+                    for (const key in obj) {
+                        if (Array.isArray(obj[key])) {
+                            console.log(`在属性 ${key} 中找到数组`);
+                            return obj[key];
+                        }
                     }
-                }
+                    
+                    // 递归检查嵌套对象
+                    for (const key in obj) {
+                        if (obj[key] && typeof obj[key] === 'object') {
+                            const result = findArrayInObject(obj[key], depth + 1);
+                            if (result) return result;
+                        }
+                    }
+                    
+                    return null;
+                };
                 
-                console.log('解析后的章节数据:', chaptersData);
-                
-                if (chaptersData && chaptersData.length > 0) {
-                    renderChapters(chaptersData);
+                const arrayFound = findArrayInObject(data);
+                if (arrayFound && arrayFound.length > 0) {
+                    console.log('在嵌套属性中找到数组');
+                    chaptersData = arrayFound;
                 } else {
-                    console.log('没有找到章节数据，回退到使用模拟数据');
-                    renderChapters(getMockChapters());
+                    console.error('数据结构:', JSON.stringify(data));
+                    throw new Error('无法识别的数据格式');
                 }
-            } catch (error) {
-                console.error('解析数据时出错:', error);
-                console.log('回退到使用模拟数据');
-                chaptersData = getMockChapters();
-                // 继续处理，不抛出异常
             }
             
             console.log('解析后的章节数据:', chaptersData);
@@ -759,37 +816,24 @@ function loadChapters() {
             if (chaptersData && chaptersData.length > 0) {
                 renderChapters(chaptersData);
             } else {
-                console.log('没有找到章节数据，回退到使用模拟数据');
-                renderChapters(getMockChapters());
+                console.error('没有找到有效的章节数据');
+                showEmptyState();
             }
-        })
-        .catch(error => {
-            console.error('加载章节数据出错:', error);
-            // 加载失败时回退到使用模拟数据
-            console.log('由于API错误，回退到使用模拟数据');
-            renderChapters(getMockChapters());
-            
-            // 显示错误状态但不替换整个容器内容，以便仍然能看到模拟数据
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-state api-error';
-            errorDiv.innerHTML = `
-                <i class="fas fa-exclamation-triangle"></i>
-                <p class="zh">无法从数据库加载章节数据，显示的是模拟数据</p>
-                <p class="en">Failed to load chapters from database, showing mock data</p>
-                <p class="error-details">${error.message}</p>
-            `;
-            
-            // 将错误信息插入到容器的开头
-            if (chaptersContainer.firstChild) {
-                chaptersContainer.insertBefore(errorDiv, chaptersContainer.firstChild);
-            } else {
-                chaptersContainer.appendChild(errorDiv);
-            }
-            
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-            }
-        });
+        } catch (error) {
+            console.error('解析数据时出错:', error);
+            showEmptyState();
+        }
+    })
+    .catch(error => {
+        console.error('加载章节数据出错:', error);
+        
+        // 显示错误状态
+        showEmptyState(error.message);
+        
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+    });
     
     // 绑定章节导航按钮事件
     const prevBtn = document.querySelector('.chapter-nav-btn.prev-btn');
@@ -797,88 +841,27 @@ function loadChapters() {
     
     if (prevBtn && nextBtn) {
         prevBtn.addEventListener('click', () => {
-            chaptersContainer.scrollBy({ left: -300, behavior: 'smooth' });
+            chaptersContainer.scrollBy({ left: -350, behavior: 'smooth' });
         });
         
         nextBtn.addEventListener('click', () => {
-            chaptersContainer.scrollBy({ left: 300, behavior: 'smooth' });
+            chaptersContainer.scrollBy({ left: 350, behavior: 'smooth' });
         });
     }
-}
 
-/**
- * 获取模拟章节数据
- * @returns {Array} 模拟的章节数据数组
- */
-function getMockChapters() {
-    return [
-        {
-            id: 1,
-            chapter_number: 1,
-            title_zh: '第1章 中国传统文化概述',
-            title_en: 'Chapter 1: Overview of Chinese Traditional Culture',
-            description_zh: '本章介绍中国传统文化的基本概念、发展历程及主要特点。',
-            description_en: 'This chapter introduces the basic concepts, development history, and main characteristics of Chinese traditional culture.',
-            image_path: '../picture/sishu.png',
-            progress: 100,
-            status: 'completed'
-        },
-        {
-            id: 2,
-            chapter_number: 2,
-            title_zh: '第2章 中国哲学与思想',
-            title_en: 'Chapter 2: Chinese Philosophy and Thought',
-            description_zh: '探讨儒家、道家、法家等主要哲学流派的核心思想及其影响。',
-            description_en: 'Exploring the core ideas and influences of major philosophical schools such as Confucianism, Taoism, and Legalism.',
-            image_path: '../picture/cha.jpg',
-            progress: 85,
-            status: 'in-progress'
-        },
-        {
-            id: 3,
-            chapter_number: 3,
-            title_zh: '第3章 中国文学艺术',
-            title_en: 'Chapter 3: Chinese Literature and Art',
-            description_zh: '介绍中国古典文学、书法、绘画、戏曲等艺术形式的发展与特点。',
-            description_en: 'Introduction to the development and characteristics of Chinese classical literature, calligraphy, painting, opera, and other art forms.',
-            image_path: '../picture/kz.png',
-            progress: 65,
-            status: 'in-progress'
-        },
-        {
-            id: 4,
-            chapter_number: 4,
-            title_zh: '第4章 中国传统节日与习俗',
-            title_en: 'Chapter 4: Chinese Traditional Festivals and Customs',
-            description_zh: '探讨中国主要传统节日的起源、习俗及其文化内涵。',
-            description_en: 'Discussing the origins, customs, and cultural connotations of major Chinese traditional festivals.',
-            image_path: '../picture/banner.jpg',
-            progress: 45,
-            status: 'in-progress'
-        },
-        {
-            id: 5,
-            chapter_number: 5,
-            title_zh: '第5章 中国传统建筑与园林',
-            title_en: 'Chapter 5: Chinese Traditional Architecture and Gardens',
-            description_zh: '介绍中国古代建筑的特点、类型及园林艺术的发展与审美价值。',
-            description_en: 'Introduction to the characteristics and types of ancient Chinese architecture and the development and aesthetic value of garden art.',
-            image_path: '../picture/yuanlin.webp',
-            progress: 25,
-            status: 'upcoming'
-        },
-        {
-            id: 6,
-            chapter_number: 6,
-            title_zh: '第6章 中国传统饮食文化',
-            title_en: 'Chapter 6: Chinese Traditional Food Culture',
-            description_zh: '探讨中国饮食文化的发展历程、地域特色及其背后的文化内涵。',
-            description_en: 'Exploring the development, regional characteristics, and cultural connotations of Chinese food culture.',
-            image_path: '../picture/ylin.jpg',
-            progress: 0,
-            status: 'upcoming'
-        }
-    ];
+    // 显示空状态或错误状态
+    function showEmptyState(errorMessage) {
+        if (!chaptersContainer) return;
+        
+        chaptersContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-circle"></i>
+                <p class="zh">暂无章节数据</p>
+                <p class="en">No chapters available</p>
+                ${errorMessage ? `<p class="error-details">${errorMessage}</p>` : ''}
+            </div>
+        `;
+    }
 }
 
 /**
@@ -961,11 +944,9 @@ function renderChapters(chapters) {
                 } else if (diffDays < 2) {
                     updateTimeStr = '更新于 昨天';
                 } else if (diffDays < 7) {
-                    updateTimeStr = `更新于 ${diffDays}天前`;
-                } else if (diffDays < 30) {
                     const diffWeeks = Math.ceil(diffDays / 7);
                     updateTimeStr = `更新于 ${diffWeeks}周前`;
-                } else if (diffDays < 365) {
+                } else if (diffDays < 30) {
                     const diffMonths = Math.ceil(diffDays / 30);
                     updateTimeStr = `更新于 ${diffMonths}月前`;
                 } else {
@@ -1138,4 +1119,84 @@ function initChapterNavButtons() {
         const scrollEvent = new Event('scroll');
         chaptersContainer.dispatchEvent(scrollEvent);
     }, 500);
-} 
+}
+
+/**
+ * 加载章节数据并滚动到新创建的章节位置
+ * @param {number} targetChapterNumber - 要滚动到的章节编号
+ */
+async function loadChaptersAndScrollToNew(targetChapterNumber) {
+    // 先加载全部章节
+    await new Promise(resolve => {
+        // 保存原始的renderChapters函数
+        const originalRenderChapters = window.renderChapters || renderChapters;
+        
+        // 重写renderChapters函数，在渲染完成后执行回调
+        window.renderChapters = function(chapters) {
+            // 调用原始的渲染函数
+            originalRenderChapters(chapters);
+            
+            // 渲染完成后恢复原函数并解析Promise
+            window.renderChapters = originalRenderChapters;
+            resolve();
+        };
+        
+        // 开始加载章节
+        loadChapters();
+    });
+    
+    // 章节加载完成后，找到并滚动到目标章节
+    setTimeout(() => {
+        const chaptersContainer = document.getElementById('chaptersContainer');
+        if (!chaptersContainer) return;
+        
+        // 查找与目标章节编号匹配的章节卡片
+        const chapterCards = chaptersContainer.querySelectorAll('.chapter-card');
+        let targetCard = null;
+        let targetIndex = -1;
+        
+        chapterCards.forEach((card, index) => {
+            const cardTitle = card.querySelector('.chapter-title.zh').textContent;
+            // 检查标题是否包含目标章节编号
+            if (cardTitle.includes(`第${targetChapterNumber}章`)) {
+                targetCard = card;
+                targetIndex = index;
+            }
+        });
+        
+        if (targetCard) {
+            console.log(`找到新创建的章节卡片，索引: ${targetIndex}`);
+            
+            // 计算目标章节的位置
+            const cardWidth = targetCard.offsetWidth;
+            const cardMargin = 20; // 假设每个卡片有20px的外边距
+            const scrollPosition = (cardWidth + cardMargin) * targetIndex;
+            
+            // 平滑滚动到目标位置
+            chaptersContainer.scrollTo({
+                left: scrollPosition,
+                behavior: 'smooth'
+            });
+            
+            // 添加高亮效果
+            targetCard.classList.add('highlight-new');
+            
+            // 3秒后移除高亮效果
+            setTimeout(() => {
+                targetCard.classList.remove('highlight-new');
+            }, 3000);
+        }
+    }, 500); // 给渲染一些时间
+}
+
+// 添加新样式以突出显示新创建的章节
+const highlightStyle = document.createElement('style');
+highlightStyle.textContent = `
+    .chapter-card.highlight-new {
+        box-shadow: 0 0 20px rgba(233, 30, 99, 0.8);
+        transform: scale(1.03);
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+`;
+document.head.appendChild(highlightStyle); 
