@@ -1,6 +1,57 @@
 // 设置离线模式，使用模拟数据
 window.isOfflineMode = false; // 设置为false，从API获取实际数据
 
+// 添加顶级样式，确保导航按钮总是可见
+const topLevelStyle = document.createElement('style');
+topLevelStyle.textContent = `
+    .chapter-nav-btn {
+        position: absolute !important; /* 改为absolute, 相对于chapters-section定位 */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 40px !important;
+        height: 40px !important;
+        background-color: white !important;
+        border-radius: 50% !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+        border: none !important;
+        z-index: 100 !important; /* 较小的z-index，避免覆盖其他UI元素 */
+        cursor: pointer !important;
+        font-size: 18px !important;
+        color: #333 !important;
+        top: 50% !important; /* 垂直居中 */
+        transform: translateY(-50%) !important;
+    }
+    
+    .chapter-nav-btn.prev-btn {
+        left: 10px !important;
+    }
+    
+    .chapter-nav-btn.next-btn {
+        right: 10px !important;
+    }
+    
+    .chapter-nav-btn:hover {
+        background-color: #f5f5f5 !important;
+        transform: translateY(-50%) scale(1.1) !important;
+    }
+    
+    .chapter-nav-btn:active {
+        transform: translateY(-50%) scale(0.95) !important;
+    }
+    
+    .chapter-nav-btn.disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+    }
+    
+    .chapters-container {
+        position: relative !important;
+        padding: 0 60px !important; /* 增加内边距，为按钮留出空间 */
+    }
+`;
+document.head.appendChild(topLevelStyle);
+
 // 等待DOM加载完成
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化导航系统
@@ -920,7 +971,7 @@ function renderChapters(chapters) {
             return null; // 未找到匹配的字段
         };
     
-    // 创建章节卡片
+        // 创建章节卡片
         chapters.forEach((chapter, index) => {
             // 获取章节信息
             const chapterId = getField(chapter, ['id', 'chapter_id', '_id']) || index + 1;
@@ -931,27 +982,28 @@ function renderChapters(chapters) {
             const descriptionEn = getField(chapter, ['description_en', 'desc_en', 'en_description', 'content_en']) || '';
             const imagePath = getField(chapter, ['cover_image', 'image_path', 'image', 'cover', 'thumbnail']) || '../picture/banner.jpg';
             
-            // 处理更新时间
-            let updateTimeStr = '更新于 3周前';
-            if (chapter.updated_at) {
-                const updateTime = new Date(chapter.updated_at);
-                const now = new Date();
-                const diffTime = Math.abs(now - updateTime);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                if (diffDays < 1) {
-                    updateTimeStr = '更新于 今天';
-                } else if (diffDays < 2) {
-                    updateTimeStr = '更新于 昨天';
-                } else if (diffDays < 7) {
-                    const diffWeeks = Math.ceil(diffDays / 7);
-                    updateTimeStr = `更新于 ${diffWeeks}周前`;
-                } else if (diffDays < 30) {
-                    const diffMonths = Math.ceil(diffDays / 30);
-                    updateTimeStr = `更新于 ${diffMonths}月前`;
-                } else {
-                    const diffYears = Math.ceil(diffDays / 365);
-                    updateTimeStr = `更新于 ${diffYears}年前`;
+            // 处理更新时间 - 格式化为年月日格式
+            let updateTimeZh = '未知日期';
+            let updateTimeEn = 'Unknown date';
+            
+            // 获取更新时间字段
+            const updateTimeValue = getField(chapter, ['updated_at', 'update_time', 'updateTime', 'last_updated', 'lastUpdated']);
+            
+            if (updateTimeValue) {
+                try {
+                    const updateTime = new Date(updateTimeValue);
+                    
+                    // 检查日期是否有效
+                    if (!isNaN(updateTime.getTime())) {
+                        // 中文格式：YYYY年MM月DD日
+                        updateTimeZh = `${updateTime.getFullYear()}年${updateTime.getMonth() + 1}月${updateTime.getDate()}日`;
+                        
+                        // 英文格式：MMM DD, YYYY
+                        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                        updateTimeEn = updateTime.toLocaleDateString('en-US', options);
+                    }
+                } catch (e) {
+                    console.error('日期格式化错误:', e);
                 }
             }
             
@@ -959,6 +1011,7 @@ function renderChapters(chapters) {
             const card = document.createElement('div');
             card.className = 'chapter-card';
             card.setAttribute('data-id', chapterId);
+            card.setAttribute('data-index', index); // 添加索引属性，用于滑块导航
             
             // 设置卡片内容 - 按照新样式报告的HTML结构
             // 增加卡片宽度和上下间距的样式
@@ -1003,8 +1056,8 @@ function renderChapters(chapters) {
                     <div class="chapter-meta" style="overflow: visible; white-space: nowrap; margin-top: 10px; margin-bottom: 5px;">
                         <div class="meta-item">
                             <i class="far fa-clock"></i>
-                            <span class="zh" style="display: inline-block;">${updateTimeStr}</span>
-                            <span class="en" style="display: inline-block;">Updated recently</span>
+                            <span class="zh" style="display: inline-block;">${updateTimeZh}</span>
+                            <span class="en" style="display: inline-block;">${updateTimeEn}</span>
                         </div>
                     </div>
                 </div>
@@ -1074,51 +1127,69 @@ function initChapterNavButtons() {
     
     if (!chaptersSection || !chaptersContainer) return;
     
-    // 检查是否已经有导航按钮
-    if (chaptersSection.querySelector('.chapter-nav-btn')) return;
+    // 删除已有的按钮（如果有）
+    const existingPrevBtn = document.querySelector('.chapter-nav-btn.prev-btn');
+    const existingNextBtn = document.querySelector('.chapter-nav-btn.next-btn');
     
-    // 创建上一章按钮
+    if (existingPrevBtn) existingPrevBtn.remove();
+    if (existingNextBtn) existingNextBtn.remove();
+    
+    // 创建新的按钮
     const prevBtn = document.createElement('button');
     prevBtn.className = 'chapter-nav-btn prev-btn';
     prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
     prevBtn.title = '查看上一章';
     
-    // 创建下一章按钮
     const nextBtn = document.createElement('button');
     nextBtn.className = 'chapter-nav-btn next-btn';
     nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
     nextBtn.title = '查看下一章';
     
-    // 添加到章节区域
+    // 将按钮添加到章节区域内部，而不是body
     chaptersSection.appendChild(prevBtn);
     chaptersSection.appendChild(nextBtn);
     
-    // 添加点击事件
-    prevBtn.addEventListener('click', function() {
-        chaptersContainer.scrollBy({ left: -350, behavior: 'smooth' });
-    });
-    
-    nextBtn.addEventListener('click', function() {
-        chaptersContainer.scrollBy({ left: 350, behavior: 'smooth' });
-    });
-    
-    // 滚动时处理按钮显示/隐藏
-    chaptersContainer.addEventListener('scroll', function() {
+    // 更新按钮状态方法
+    function updateButtonsPosition() {
+        // 计算是否在开始或结束位置
         const isAtStart = chaptersContainer.scrollLeft <= 10;
         const isAtEnd = chaptersContainer.scrollLeft + chaptersContainer.clientWidth >= chaptersContainer.scrollWidth - 10;
         
-        prevBtn.style.opacity = isAtStart ? '0.5' : '1';
-        prevBtn.style.pointerEvents = isAtStart ? 'none' : 'auto';
+        // 更新按钮状态
+        if (isAtStart) {
+            prevBtn.classList.add('disabled');
+        } else {
+            prevBtn.classList.remove('disabled');
+        }
         
-        nextBtn.style.opacity = isAtEnd ? '0.5' : '1';
-        nextBtn.style.pointerEvents = isAtEnd ? 'none' : 'auto';
+        if (isAtEnd) {
+            nextBtn.classList.add('disabled');
+        } else {
+            nextBtn.classList.remove('disabled');
+        }
+    }
+    
+    // 添加点击事件
+    prevBtn.addEventListener('click', function() {
+        if (!this.classList.contains('disabled')) {
+            chaptersContainer.scrollBy({ left: -350, behavior: 'smooth' });
+        }
     });
     
-    // 初始化按钮状态
-    setTimeout(() => {
-        const scrollEvent = new Event('scroll');
-        chaptersContainer.dispatchEvent(scrollEvent);
-    }, 500);
+    nextBtn.addEventListener('click', function() {
+        if (!this.classList.contains('disabled')) {
+            chaptersContainer.scrollBy({ left: 350, behavior: 'smooth' });
+        }
+    });
+    
+    // 监听滚动事件
+    chaptersContainer.addEventListener('scroll', updateButtonsPosition);
+    
+    // 立即更新位置
+    updateButtonsPosition();
+    
+    // 确保初始化后更新一次
+    setTimeout(updateButtonsPosition, 500);
 }
 
 /**
