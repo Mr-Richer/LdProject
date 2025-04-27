@@ -6,9 +6,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
     <meta name="renderer" content="webkit">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PPTist - 在线演示文稿（幻灯片）应用，还原了大部分 Office PowerPoint 常用功能，实现在线PPT的编辑、演示，支持导出PPT文件，支持AI生成PPT。" />
-    <meta name="keywords" content="pptist,ppt,powerpoint,office powerpoint,在线ppt,幻灯片,演示文稿,ppt在线制作,aippt" />
-    <title>PPTist - 在线演示文稿</title>
+    <meta name="description" content="在线课件编辑器 - 创建、编辑和演示幻灯片课件" />
+    <meta name="keywords" content="课件编辑器,演示文稿,幻灯片,教学工具" />
+    <title>在线课件编辑器</title>
 
     <style>
       .first-screen-loading {
@@ -27,7 +27,7 @@
       .first-screen-loading-spinner {
         width: 36px;
         height: 36px;
-        border: 3px solid #d14424;
+        border: 3px solid #2D68F4;
         border-top-color: transparent;
         border-radius: 50%;
         box-sizing: border-box;
@@ -35,7 +35,7 @@
       }
       .first-screen-loading-text {
         margin-top: 20px;
-        color: #d14424;
+        color: #2D68F4;
       }
       @keyframes spinner {
         0% {
@@ -51,14 +51,14 @@
     <div id="app">
       <div class="first-screen-loading">
         <div class="first-screen-loading-spinner"></div>
-        <div class="first-screen-loading-text">正在加载中，请稍等 ...</div>
+        <div class="first-screen-loading-text">正在加载课件编辑器...</div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 
   <script>
-    // 只在PPTist应用内部禁用右键菜单，不影响父页面
+    // 只在应用内部禁用右键菜单，不影响父页面
     document.getElementById('app').oncontextmenu = e => e.preventDefault()
   </script>
 </html>

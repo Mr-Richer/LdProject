@@ -26,7 +26,7 @@ export default () => {
   const { addSlidesFromData } = useAddSlidesOrElements()
   const { addHistorySnapshot } = useHistorySnapshot()
 
-  // 重置幻灯片
+  // 重置幻灯片（只保留一张空白幻灯片）
   const resetSlides = () => {
     const emptySlide: Slide = {
       id: nanoid(10),
@@ -36,9 +36,18 @@ export default () => {
         color: theme.value.backgroundColor,
       },
     }
+    
     slidesStore.updateSlideIndex(0)
     mainStore.setActiveElementIdList([])
     slidesStore.setSlides([emptySlide])
+    addHistorySnapshot()
+  }
+
+  // 保存幻灯片
+  const saveSlides = () => {
+    console.log('保存幻灯片')
+    addHistorySnapshot()
+    // 这里你可以添加更多保存操作，如将数据保存到localStorage或发送到服务器
   }
 
   /**
@@ -176,6 +185,7 @@ export default () => {
 
   return {
     resetSlides,
+    saveSlides,
     updateSlideIndex,
     copySlide,
     pasteSlide,

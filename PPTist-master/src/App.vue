@@ -19,6 +19,7 @@ import { isPC } from '@/utils/common'
 import type { Slide } from '@/types/slides'
 import message from './utils/message'
 import api from '@/services'
+import { nanoid } from 'nanoid'
 
 import Editor from './views/Editor/index.vue'
 import Screen from './views/Screen/index.vue'
@@ -31,7 +32,7 @@ const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
 const snapshotStore = useSnapshotStore()
 const { databaseId } = storeToRefs(mainStore)
-const { slides } = storeToRefs(slidesStore)
+const { slides, theme } = storeToRefs(slidesStore)
 const { screening } = storeToRefs(useScreenStore())
 
 if (import.meta.env.MODE !== 'development') {
@@ -39,17 +40,18 @@ if (import.meta.env.MODE !== 'development') {
 }
 
 onMounted(async () => {
-  if (location.hostname === 'localhost') {
-    message.error('本地开发请访问 http://127.0.0.1:5173，否则不保证数据可靠性', { duration: 0, closable: true })
-    api.getMockData('slides').then((slides: Slide[]) => {
-      slidesStore.setSlides(slides)
-    })
+  // 创建一张空白幻灯片
+  const emptySlide: Slide = {
+    id: nanoid(10),
+    elements: [],
+    background: {
+      type: 'solid',
+      color: theme.value.backgroundColor,
+    },
   }
-  else {
-    api.getFileData('slides').then((slides: Slide[]) => {
-      slidesStore.setSlides(slides)
-    })
-  }
+  slidesStore.updateSlideIndex(0)
+  mainStore.setActiveElementIdList([])
+  slidesStore.setSlides([emptySlide])
 
   await deleteDiscardedDB()
   snapshotStore.initSnapshotDatabase()

@@ -30,9 +30,9 @@ export interface SlidesState {
 
 export const useSlidesStore = defineStore('slides', {
   state: (): SlidesState => ({
-    title: '未命名演示文稿', // 幻灯片标题
+    title: '课件编辑器', // 修改默认标题
     theme: {
-      themeColors: ['#5b9bd5', '#ed7d31', '#a5a5a5', '#ffc000', '#4472c4', '#70ad47'],
+      themeColors: ['#2D68F4', '#ed7d31', '#5b9bd5', '#ffc000', '#4472c4', '#70ad47'], // 修改主题色，将第一个颜色改为蓝色
       fontColor: '#333',
       fontName: '',
       backgroundColor: '#fff',
@@ -53,11 +53,11 @@ export const useSlidesStore = defineStore('slides', {
     viewportSize: 1000, // 可视区域宽度基数
     viewportRatio: 0.5625, // 可视区域比例，默认16:9
     templates: [
-      { name: '红色通用', id: 'template_1', cover: 'https://asset.pptist.cn/img/template_1.jpg' },
       { name: '蓝色通用', id: 'template_2', cover: 'https://asset.pptist.cn/img/template_2.jpg' },
+      { name: '红色通用', id: 'template_1', cover: 'https://asset.pptist.cn/img/template_1.jpg' },
       { name: '紫色通用', id: 'template_3', cover: 'https://asset.pptist.cn/img/template_3.jpg' },
       { name: '莫兰迪配色', id: 'template_4', cover: 'https://asset.pptist.cn/img/template_4.jpg' },
-    ], // 模板
+    ], // 模板 - 调整顺序，让蓝色模板排在前面
   }),
 
   getters: {
@@ -75,8 +75,8 @@ export const useSlidesStore = defineStore('slides', {
     },
 
     // 格式化的当前页动画
-    // 将触发条件为“与上一动画同时”的项目向上合并到序列中的同一位置
-    // 为触发条件为“上一动画之后”项目的上一项添加自动向下执行标记
+    // 将触发条件为"与上一动画同时"的项目向上合并到序列中的同一位置
+    // 为触发条件为"上一动画之后"项目的上一项添加自动向下执行标记
     formatedAnimations(state) {
       const currentSlide = state.slides[state.slideIndex]
       if (!currentSlide?.animations) return []

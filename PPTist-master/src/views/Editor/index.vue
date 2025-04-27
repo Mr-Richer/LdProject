@@ -47,6 +47,8 @@ import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/store'
 import useGlobalHotkey from '@/hooks/useGlobalHotkey'
 import usePasteEvent from '@/hooks/usePasteEvent'
+import useScreening from '@/hooks/useScreening'
+import useSlideHandler from '@/hooks/useSlideHandler'
 
 import EditorHeader from './EditorHeader/index.vue'
 import Canvas from './Canvas/index.vue'
@@ -72,9 +74,13 @@ const remarkHeight = ref(40)
 useGlobalHotkey()
 usePasteEvent()
 
-// 添加消息监听
-const handleMessage = (event) => {
-  if (event.data.type === 'SAVE_PPT') {
+// 添加使用函数
+const { enterScreening } = useScreening()
+const { saveSlides } = useSlideHandler()
+
+// 修改handleMessage函数
+const handleMessage = (event: MessageEvent) => {
+  if (event.data && event.data.type === 'SAVE_PPT') {
     // 调用保存方法
     saveSlides()
     // 发送保存成功消息
@@ -82,7 +88,7 @@ const handleMessage = (event) => {
       type: 'PPT_SAVED',
       data: {}
     }, '*')
-  } else if (event.data.type === 'PREVIEW_PPT') {
+  } else if (event.data && event.data.type === 'PREVIEW_PPT') {
     // 调用预览方法
     enterScreening()
     // 发送预览消息
