@@ -1548,9 +1548,14 @@ function initCoursewareDesign() {
             e.stopPropagation(); // 阻止事件冒泡
             console.log('Replace courseware button clicked');
             
-            // 显示替换课件弹窗
-            // 此处可以添加替换课件弹窗的显示逻辑
-            showNotification('替换课件功能已触发', 'info');
+            // 刷新PPTist iframe
+            const pptistFrame = document.getElementById('pptistFrame');
+            if (pptistFrame) {
+                pptistFrame.src = pptistFrame.src;
+                showNotification('已重新加载PPTist编辑器', 'info');
+            } else {
+                showNotification('替换课件功能已触发', 'info');
+            }
         });
     }
     
@@ -1561,6 +1566,51 @@ function initCoursewareDesign() {
             thumbnails.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
         });
+    });
+    
+    // 初始化PPTist iframe
+    initPPTistFrame();
+}
+
+/**
+ * 初始化PPTist iframe
+ */
+function initPPTistFrame() {
+    const pptistFrame = document.getElementById('pptistFrame');
+    if (!pptistFrame) {
+        console.log('PPTist iframe not found');
+        return;
+    }
+    
+    // 监听iframe加载完成事件
+    pptistFrame.addEventListener('load', function() {
+        console.log('PPTist iframe loaded');
+        showNotification('PPTist编辑器已加载完成', 'success');
+        
+        // 尝试向iframe发送消息(可用于后续的通信需求)
+        try {
+            pptistFrame.contentWindow.postMessage({
+                type: 'init',
+                source: 'courseware-platform'
+            }, '*');
+        } catch (error) {
+            console.error('Error sending message to PPTist iframe:', error);
+        }
+    });
+    
+    // 监听来自iframe的消息(可用于后续的通信需求)
+    window.addEventListener('message', function(event) {
+        // 确保消息来源是我们的iframe
+        if (event.source === pptistFrame.contentWindow) {
+            console.log('Received message from PPTist iframe:', event.data);
+            
+            // 处理不同类型的消息
+            if (event.data.type === 'save') {
+                showNotification('课件已保存', 'success');
+            } else if (event.data.type === 'export') {
+                showNotification('课件已导出', 'success');
+            }
+        }
     });
 }
 

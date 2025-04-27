@@ -65,8 +65,9 @@ echo 选择启动模式:
 echo [1] 仅启动后端服务
 echo [2] 仅启动PPTist前端
 echo [3] 同时启动后端服务和PPTist前端
+echo [4] 启动全部服务（后端、PPTist和课程平台）
 echo.
-set /p choice=请输入选项(1-3): 
+set /p choice=请输入选项(1-4): 
 
 if "%choice%"=="1" (
   echo.
@@ -96,6 +97,27 @@ if "%choice%"=="1" (
   start cmd /k "chcp 65001 && cd %~dp0\..\PPTist-master && npm run dev"
   
   echo 服务已在新窗口中启动
+) else if "%choice%"=="4" (
+  echo.
+  echo 启动全部服务（后端、PPTist和课程平台）...
+  echo.
+  echo 提示: 这将打开三个命令窗口，分别运行所需服务
+  echo 关闭窗口可停止相应的服务
+  echo.
+  
+  start cmd /k "chcp 65001 && cd %~dp0 && npm run start:dev"
+  
+  start cmd /k "chcp 65001 && cd %~dp0\..\PPTist-master && npm run dev"
+  
+  echo 服务已在新窗口中启动
+  
+  echo.
+  echo 等待5秒，让服务启动...
+  timeout /t 5 /nobreak > nul
+  
+  echo.
+  echo 打开浏览器访问课程平台...
+  start http://localhost:3000/admin
 ) else (
   echo 无效的选项，请重新运行脚本选择正确的启动模式
 )
