@@ -215,4 +215,27 @@
 
 .next-btn {
     right: -26px;
+}
+
+/* 确保生成的题目列表仅在课堂小测标签页中显示 */
+.tab-content:not(.active) .generated-questions-list {
+    display: none !important;
+}
+
+/* 题目列表基础样式 */
+.generated-questions-list {
+    margin-top: 30px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 20px;
+}
+
+/* 为题目列表添加显示动画 */
+.generated-questions-list.visible {
+    animation: fadeIn 0.5s ease forwards;
+    display: block !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 } 

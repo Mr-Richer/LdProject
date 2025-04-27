@@ -94,6 +94,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化章节选择器
     initChapterSelector();
     
+    // 初始化AI助教-课前选项卡切换
+    initAIPreTabs();
+    
+    // 初始化AI助教-课前部分
+    initAIPre();
+    
     console.log('页面功能初始化完成');
 });
 
@@ -1419,4 +1425,291 @@ function updateAIPreContent(chapterNumber, chapterTitle) {
     
     // 可以在这里添加更多内容更新逻辑
     console.log(`正在加载章节 ${chapterNumber} 的课前内容`);
+}
+
+/**
+ * 初始化AI助教-课前选项卡切换
+ */
+function initAIPreTabs() {
+    const tabBtns = document.querySelectorAll('.ai-pre-tabs .tab-btn');
+    const tabContents = document.querySelectorAll('.ai-pre-tabs .tab-content');
+    
+    if (!tabBtns.length || !tabContents.length) {
+        console.log('Tab buttons or contents not found');
+        return;
+    }
+    
+    console.log('Initializing AI Pre Tabs, found', tabBtns.length, 'buttons');
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // 移除所有选项卡的活动状态
+            tabBtns.forEach(tabBtn => tabBtn.classList.remove('active'));
+            
+            // 为当前点击的选项卡添加活动状态
+            this.classList.add('active');
+            
+            // 获取要显示的内容区域的ID
+            const tabId = this.getAttribute('data-tab');
+            const contentId = tabId + '-content';
+            
+            console.log('Tab clicked:', tabId, 'Looking for content:', contentId);
+            
+            // 隐藏所有内容区域
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // 显示对应的内容区域
+            const targetContent = document.getElementById(contentId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+                // 添加动态效果
+                animateTabContentChange(targetContent);
+                console.log('Activated content:', contentId);
+            } else {
+                console.log('Content not found:', contentId);
+            }
+        });
+    });
+}
+
+/**
+ * 为选项卡内容添加切换动画
+ * @param {HTMLElement} content - 要添加动画的内容元素
+ */
+function animateTabContentChange(content) {
+    content.style.opacity = '0';
+    content.style.transform = 'translateY(10px)';
+    
+    setTimeout(() => {
+        content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        content.style.opacity = '1';
+        content.style.transform = 'translateY(0)';
+    }, 50);
+}
+
+/**
+ * 初始化AI助教-课前部分
+ */
+function initAIPre() {
+    console.log('Initializing AI Pre section');
+    
+    // 初始化选项卡切换
+    initAIPreTabs();
+    
+    // 初始化课件设计功能
+    initCoursewareDesign();
+    
+    // 初始化课堂小测功能
+    initQuizGenerator();
+    
+    // 初始化知识拓展功能
+    initKnowledgeExpansion();
+}
+
+/**
+ * 初始化课件设计功能
+ */
+function initCoursewareDesign() {
+    console.log('Initializing Courseware Design');
+    const coursewareContent = document.getElementById('courseware-content');
+    if (!coursewareContent) {
+        console.log('Courseware content not found');
+        return;
+    }
+
+    const actionButtons = coursewareContent.querySelectorAll('.action-button');
+    if (!actionButtons.length) {
+        console.log('Action buttons not found');
+        return;
+    }
+    
+    const genBtn = actionButtons[0]; // 内容生成按钮是第一个按钮
+    const replaceBtn = actionButtons[1]; // 替换课件按钮是第二个按钮
+    
+    // 内容生成按钮初始化
+    if (genBtn) {
+        genBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // 阻止事件冒泡
+            console.log('Content generation button clicked');
+            
+            // 显示内容生成模态框
+            const modal = document.getElementById('contentGenerateModal');
+            if (modal) {
+                modal.classList.add('active');
+            } else {
+                console.log('Content generate modal not found');
+            }
+        });
+    }
+    
+    // 替换课件按钮初始化
+    if (replaceBtn) {
+        replaceBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // 阻止事件冒泡
+            console.log('Replace courseware button clicked');
+            
+            // 显示替换课件弹窗
+            // 此处可以添加替换课件弹窗的显示逻辑
+            showNotification('替换课件功能已触发', 'info');
+        });
+    }
+    
+    // 幻灯片缩略图交互
+    const thumbnails = coursewareContent.querySelectorAll('.thumbnail-item');
+    thumbnails.forEach(thumb => {
+        thumb.addEventListener('click', function() {
+            thumbnails.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
+
+/**
+ * 初始化课堂小测功能
+ */
+function initQuizGenerator() {
+    console.log('Initializing Quiz Generator');
+    
+    // 题型选择
+    const quizContent = document.getElementById('quiz-content');
+    if (!quizContent) {
+        console.log('Quiz content not found');
+        return;
+    }
+    
+    const quizTypes = quizContent.querySelectorAll('.quiz-type');
+    
+    quizTypes.forEach(type => {
+        type.addEventListener('click', function() {
+            quizTypes.forEach(qt => qt.classList.remove('active'));
+            this.classList.add('active');
+            console.log('Quiz type selected:', this.querySelector('span.zh').textContent);
+        });
+    });
+    
+    // 生成方式选择
+    const optionBtns = quizContent.querySelectorAll('.option-btn');
+    
+    optionBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const parent = this.parentElement;
+            parent.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+    
+    // 难度滑块
+    const difficultySlider = document.getElementById('difficulty-slider');
+    
+    if (difficultySlider) {
+        difficultySlider.addEventListener('input', function() {
+            console.log('Difficulty level changed:', this.value);
+        });
+    }
+    
+    // 生成按钮
+    const generateBtn = quizContent.querySelector('.generate-btn');
+    
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+            console.log('Generate quiz button clicked');
+            showNotification('正在生成题目...', 'info');
+            
+            // 模拟生成过程
+            setTimeout(() => {
+                showNotification('题目生成成功！', 'success');
+                
+                // 显示题目结果和生成的题目列表 - 修改这里，从quizContent内部查找元素
+                const quizResult = quizContent.querySelector('.quiz-result');
+                const generatedQuestionsList = quizContent.querySelector('.generated-questions-list');
+                
+                console.log('Quiz result element:', quizResult);
+                console.log('Generated questions list element:', generatedQuestionsList);
+                
+                if (quizResult) {
+                    quizResult.style.display = 'block';
+                }
+                
+                if (generatedQuestionsList) {
+                    // 直接设置样式，确保显示
+                    generatedQuestionsList.style.display = 'block';
+                    
+                    // 移除任何可能导致隐藏的类
+                    generatedQuestionsList.classList.remove('hidden');
+                    
+                    // 添加可见类
+                    generatedQuestionsList.classList.add('visible');
+                    
+                    console.log('题目列表显示设置完成');
+                    
+                    // 滚动到题目列表
+                    setTimeout(() => {
+                        generatedQuestionsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 300);
+                } else {
+                    console.error('找不到题目列表元素');
+                }
+            }, 1500);
+        });
+    }
+}
+
+/**
+ * 初始化知识拓展功能
+ */
+function initKnowledgeExpansion() {
+    console.log('Initializing Knowledge Expansion');
+    
+    const knowledgeContent = document.getElementById('knowledge-content');
+    if (!knowledgeContent) {
+        console.log('Knowledge content not found');
+        return;
+    }
+    
+    // 文化按钮选择
+    const cultureBtns = knowledgeContent.querySelectorAll('.culture-btn');
+    
+    cultureBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            cultureBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            console.log('Culture button selected:', this.querySelector('span.zh').textContent);
+        });
+    });
+    
+    // 生成按钮
+    const generateBtn = knowledgeContent.querySelector('.generate-btn');
+    
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+            console.log('Generate knowledge expansion button clicked');
+            showNotification('正在生成知识拓展...', 'info');
+            
+            // 模拟生成过程
+            setTimeout(() => {
+                const knowledgeResult = document.querySelector('.knowledge-result');
+                if (knowledgeResult) {
+                    knowledgeResult.style.display = 'block';
+                    
+                    // 添加动画效果
+                    knowledgeResult.style.opacity = '0';
+                    knowledgeResult.style.transform = 'translateY(20px)';
+                    
+                    setTimeout(() => {
+                        knowledgeResult.style.opacity = '1';
+                        knowledgeResult.style.transform = 'translateY(0)';
+                        knowledgeResult.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        
+                        // 显示知识拓展列表
+                        const knowledgeExpansionList = document.querySelector('.knowledge-expansion-list');
+                        if (knowledgeExpansionList) {
+                            knowledgeExpansionList.style.display = 'block';
+                        }
+                    }, 50);
+                }
+                
+                showNotification('知识拓展已生成', 'success');
+            }, 1500);
+        });
+    }
 } 
