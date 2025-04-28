@@ -482,6 +482,8 @@ function initTabSwitching() {
             const tabContainer = this.closest('.tab-container');
             const targetId = this.getAttribute('data-tab');
             
+            // 确保tabContainer存在
+            if (tabContainer) {
             // 更新按钮状态
             tabContainer.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -492,7 +494,25 @@ function initTabSwitching() {
             tabContainer.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            document.getElementById(targetId).classList.add('active');
+                
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+            } else {
+                console.error('无法找到tab容器元素');
+                this.classList.add('active');
+                
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) {
+                    // 找到同级别的其他内容元素，先隐藏它们
+                    const siblingContents = document.querySelectorAll('.tab-content');
+                    siblingContents.forEach(content => content.classList.remove('active'));
+                    
+                    // 显示目标内容
+                    targetContent.classList.add('active');
+                }
+            }
         });
     });
 }
@@ -533,9 +553,20 @@ function initTeachingAssistant() {
     const assistantResults = document.querySelectorAll('.assistant-result');
     const generateButtons = document.querySelectorAll('.generate-btn');
     
+    // 检查是否找到了生成按钮
+    if (generateButtons.length === 0) {
+        console.error('找不到生成按钮元素 .generate-btn');
+        return;
+    }
+    
     generateButtons.forEach(button => {
         button.addEventListener('click', function() {
             const assistantContainer = this.closest('.assistant-container');
+            if (!assistantContainer) {
+                console.error('找不到助手容器元素 .assistant-container');
+                return;
+            }
+            
             const promptInput = assistantContainer.querySelector('.assistant-prompt');
             const resultContainer = assistantContainer.querySelector('.assistant-result');
             
@@ -1482,8 +1513,20 @@ function initAIPre() {
     // 初始化课件设计功能
     initCoursewareDesign();
     
-    // 初始化课堂小测功能
-    initQuizGenerator();
+    // 加载小测生成模块
+    loadScript('../src/components/quizGenerator/QuizGenerator.js')
+        .then(() => {
+            if (window.QuizGenerator && typeof window.QuizGenerator.init === 'function') {
+                window.QuizGenerator.init();
+                console.log('课堂小测模块加载成功');
+            } else {
+                console.error('课堂小测模块加载失败：未找到QuizGenerator.init方法');
+            }
+        })
+        .catch(error => {
+            console.error('加载课堂小测模块失败:', error);
+            showNotification('课堂小测模块加载失败', 'error');
+        });
     
     // 初始化知识拓展功能
     initKnowledgeExpansion();
@@ -1710,96 +1753,6 @@ function initContentGenerateModal() {
 }
 
 /**
- * 初始化课堂小测功能
- */
-function initQuizGenerator() {
-    console.log('Initializing Quiz Generator');
-    
-    // 题型选择
-    const quizContent = document.getElementById('quiz-content');
-    if (!quizContent) {
-        console.log('Quiz content not found');
-        return;
-    }
-    
-    const quizTypes = quizContent.querySelectorAll('.quiz-type');
-    
-    quizTypes.forEach(type => {
-        type.addEventListener('click', function() {
-            quizTypes.forEach(qt => qt.classList.remove('active'));
-            this.classList.add('active');
-            console.log('Quiz type selected:', this.querySelector('span.zh').textContent);
-        });
-    });
-    
-    // 生成方式选择
-    const optionBtns = quizContent.querySelectorAll('.option-btn');
-    
-    optionBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const parent = this.parentElement;
-            parent.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-    
-    // 难度滑块
-    const difficultySlider = document.getElementById('difficulty-slider');
-    
-    if (difficultySlider) {
-        difficultySlider.addEventListener('input', function() {
-            console.log('Difficulty level changed:', this.value);
-        });
-    }
-    
-    // 生成按钮
-    const generateBtn = quizContent.querySelector('.generate-btn');
-    
-    if (generateBtn) {
-        generateBtn.addEventListener('click', function() {
-            console.log('Generate quiz button clicked');
-            showNotification('正在生成题目...', 'info');
-            
-            // 模拟生成过程
-            setTimeout(() => {
-                showNotification('题目生成成功！', 'success');
-                
-                // 显示题目结果和生成的题目列表 - 修改这里，从quizContent内部查找元素
-                const quizResult = quizContent.querySelector('.quiz-result');
-                const generatedQuestionsList = quizContent.querySelector('.generated-questions-list');
-                
-                console.log('Quiz result element:', quizResult);
-                console.log('Generated questions list element:', generatedQuestionsList);
-                
-                if (quizResult) {
-                    quizResult.style.display = 'block';
-                }
-                
-                if (generatedQuestionsList) {
-                    // 直接设置样式，确保显示
-                    generatedQuestionsList.style.display = 'block';
-                    
-                    // 移除任何可能导致隐藏的类
-                    generatedQuestionsList.classList.remove('hidden');
-                    
-                    // 添加可见类
-                    generatedQuestionsList.classList.add('visible');
-                    
-                    console.log('题目列表显示设置完成');
-                    
-                    // 滚动到题目列表
-                    setTimeout(() => {
-                        generatedQuestionsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 300);
-                } else {
-                    console.error('找不到题目列表元素');
-                }
-            }, 1500);
-        });
-    }
-}
-
-/**
  * 初始化知识拓展功能
  */
 function initKnowledgeExpansion() {
@@ -1973,3 +1926,24 @@ function refreshChapterSelector() {
 // 将刷新章节选择器的函数暴露到全局，使其他组件可以调用
 window.PreClass = window.PreClass || {};
 window.PreClass.refreshChapterSelector = refreshChapterSelector; 
+
+/**
+ * 动态加载脚本
+ * @param {string} url - 脚本URL
+ * @returns {Promise} - 加载完成的Promise
+ */
+function loadScript(url) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = () => {
+            console.log(`脚本加载成功: ${url}`);
+            resolve();
+        };
+        script.onerror = (error) => {
+            console.error(`脚本加载失败: ${url}`, error);
+            reject(new Error(`无法加载脚本: ${url}`));
+        };
+        document.head.appendChild(script);
+    });
+} 

@@ -96,6 +96,17 @@ const API = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    // 生成单选题测验题目
+    generateSingleChoiceQuestions: (chapterId, count = 5, difficulty = 'medium') => 
+      request('/api/ai/quiz/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          chapterId,
+          questionType: 'single',
+          count,
+          difficulty
+        }),
+      }),
   },
 
   // 文件上传
