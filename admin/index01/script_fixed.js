@@ -3,6 +3,45 @@ window.isOfflineMode = false; // 设置为false，从API获取实际数据
 
 // API配置
 const API_BASE_URL = 'http://localhost:3000'; // 开发环境
+
+// 动态加载ChapterUpload组件脚本
+function loadChapterUploadScript() {
+    return new Promise((resolve, reject) => {
+        // 检查是否已加载
+        if (window.ChapterUpload) {
+            console.log('ChapterUpload组件已加载');
+            resolve();
+            return;
+        }
+        
+        console.log('开始加载ChapterUpload组件...');
+        const script = document.createElement('script');
+        script.src = '../src/components/chapter/ChapterUpload.js';
+        script.onload = () => {
+            console.log('ChapterUpload组件加载成功');
+            resolve();
+        };
+        script.onerror = (error) => {
+            console.error('ChapterUpload组件加载失败:', error);
+            reject(new Error('无法加载ChapterUpload组件'));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+// 确保没有其他script_new.js在运行
+function checkForConflictingScripts() {
+    const scriptTags = document.querySelectorAll('script');
+    for (const scriptTag of scriptTags) {
+        const src = scriptTag.getAttribute('src');
+        if (src && (src.includes('script_new.js') || src.includes('script.js.original'))) {
+            console.warn(`发现可能的冲突脚本: ${src}，这可能导致重复创建章节`);
+            return true;
+        }
+    }
+    return false;
+}
+
 // 添加顶级样式，确保导航按钮总是可见
 const topLevelStyle = document.createElement('style');
 topLevelStyle.textContent = `
@@ -55,7 +94,21 @@ topLevelStyle.textContent = `
 document.head.appendChild(topLevelStyle);
 
 // 等待DOM加载完成
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // 检查是否存在冲突脚本
+    const hasConflicts = checkForConflictingScripts();
+    if (hasConflicts) {
+        console.warn('检测到可能的脚本冲突，这可能导致重复创建章节。请检查HTML中是否加载了多个JS文件。');
+    }
+    
+    // 先加载ChapterUpload组件
+    try {
+        await loadChapterUploadScript();
+    } catch (error) {
+        console.error('加载ChapterUpload组件失败:', error);
+        showNotification('系统错误：无法加载章节上传组件', 'error');
+    }
+    
     // 初始化导航系统
     initNavigation();
     
@@ -234,124 +287,56 @@ function initChapterModal() {
         }
     });
     
-    // 确认按钮 - 将数据保存到数据库
+    // 确认按钮 - 使用ChapterUpload组件的方法而不是自己实现
     confirmBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
-            const form = document.getElementById('newChapterForm');
-            
-            // 获取表单数据
-            const chapterNumber = document.getElementById('chapterNumber').value.trim();
-            const titleZh = document.getElementById('titleZh').value.trim();
-            const titleEn = document.getElementById('titleEn').value.trim();
-            const descriptionZh = document.getElementById('descriptionZh').value.trim();
-            const descriptionEn = document.getElementById('descriptionEn').value.trim();
-            const isPublished = document.getElementById('isPublished').checked;
-            
-            // 验证必填字段
-            if (!chapterNumber || !titleZh || !titleEn) {
-                showNotification('请填写必填字段（章节编号和标题）', 'warning');
-                return;
-            }
-            
-            try {
-                // 显示加载状态
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="zh">保存中...</span><span class="en">Saving...</span>';
-                
-                // 创建要发送的数据对象
-                const chapterData = {
-                    chapter_number: parseInt(chapterNumber),
-                    title_zh: titleZh,
-                    title_en: titleEn,
-                    description_zh: descriptionZh,
-                    description_en: descriptionEn,
-                    is_published: isPublished,
-                    order_index: parseInt(chapterNumber)
-                };
-                
-                // 处理封面图片
-                const fileInput = document.getElementById('coverImage');
-                let imageUploadPromise = Promise.resolve();
-                
-                if (fileInput && fileInput.files && fileInput.files[0]) {
-                    const file = fileInput.files[0];
-                    const formData = new FormData();
-                    formData.append('file', file);
+            // 检查是否有ChapterUpload组件
+            if (window.ChapterUpload && typeof window.ChapterUpload.submitNewChapter === 'function') {
+                // 使用ChapterUpload组件的方法提交表单
+                console.log('使用ChapterUpload组件提交表单');
+                try {
+                    // 显示加载状态
+                    const originalBtnText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="zh">保存中...</span><span class="en">Saving...</span>';
                     
-                    // 先上传图片
-                    imageUploadPromise = fetch(`${API_BASE_URL}/api/upload/image`, {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('图片上传失败');
-                        }
-                        return response.json();
-                    })
-                    .then(result => {
-                        // 将返回的图片路径添加到章节数据中
-                        if (result.code === 200 && result.data && result.data.url) {
-                            chapterData.cover_image = result.data.url;
-                        } else {
-                            // 如果服务器没有返回图片路径，使用默认图片
-                            chapterData.cover_image = '../picture/banner.jpg';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('上传图片时出错:', error);
-                        // 出错时使用默认图片
-                        chapterData.cover_image = '../picture/banner.jpg';
-                    });
-                } else {
-                    // 如果没有选择图片，使用默认图片
-                    chapterData.cover_image = '../picture/banner.jpg';
+                    // 调用ChapterUpload的提交方法
+                    await window.ChapterUpload.submitNewChapter();
+                    
+                    // 关闭模态框
+                    closeModal();
+                    
+                    // 重新加载章节列表
+                    await loadChapters();
+                    
+                    // 更新章节统计数据
+                    updateChapterStats();
+                    
+                    // 刷新课前章节选择器
+                    if (window.PreClass && typeof window.PreClass.refreshChapterSelector === 'function') {
+                        // 使用短延迟，确保章节创建完全完成后再刷新选择器
+                        setTimeout(() => {
+                            window.PreClass.refreshChapterSelector();
+                            console.log('已刷新课前章节选择器');
+                        }, 300);
+                    }
+                    
+                    // 刷新所有章节选择器
+                    if (typeof window.ChapterUpload.refreshAllSelectors === 'function') {
+                        window.ChapterUpload.refreshAllSelectors();
+                    }
+                } catch (error) {
+                    console.error('保存章节时出错:', error);
+                    showNotification(`保存失败: ${error.message}`, 'error');
+                } finally {
+                    // 恢复按钮状态
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="zh">保存</span><span class="en">Save</span>';
                 }
-                
-                // 等待图片上传完成
-                await imageUploadPromise;
-                
-                console.log('发送章节数据:', chapterData);
-                
-                // 发送API请求保存章节数据
-                const response = await fetch(`${API_BASE_URL}/api/chapters`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(chapterData)
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `API错误: ${response.status}`);
-                }
-                
-                const result = await response.json();
-                console.log('章节保存成功:', result);
-                
-                // 显示成功消息
-                showNotification('章节创建成功！', 'success');
-                
-                // 关闭模态框
-                closeModal();
-                
-                // 保存创建的章节编号，用于后续定位
-                const createdChapterNumber = parseInt(chapterNumber);
-                
-                // 重新加载章节列表并在加载完成后滚动到新章节位置
-                await loadChaptersAndScrollToNew(createdChapterNumber);
-                
-                // 更新章节统计数据
-                updateChapterStats();
-                
-            } catch (error) {
-                console.error('保存章节时出错:', error);
-                showNotification(`保存失败: ${error.message}`, 'error');
-            } finally {
-                // 恢复按钮状态
-                btn.disabled = false;
-                btn.innerHTML = '<span class="zh">保存</span><span class="en">Save</span>';
+            } else {
+                // ChapterUpload组件不可用，显示错误
+                console.error('ChapterUpload组件未加载或submitNewChapter方法不可用');
+                showNotification('系统错误：章节创建组件未加载', 'error');
             }
         });
     });
@@ -1760,4 +1745,119 @@ function initKnowledgeExpansion() {
             }, 1500);
         });
     }
-} 
+}
+
+/**
+ * 刷新章节选择器
+ * 重新从API获取最新的章节数据并更新选择器
+ */
+function refreshChapterSelector() {
+    console.log('开始刷新章节选择器...');
+    
+    const chapterSelect = document.getElementById('chapter-select');
+    if (!chapterSelect) {
+        console.error('章节选择器元素未找到');
+        return;
+    }
+    
+    // 保存当前选中的值
+    const currentSelectedValue = chapterSelect.value;
+    
+    // 显示加载中状态
+    chapterSelect.innerHTML = '<option disabled selected>刷新中...</option>';
+    
+    // 获取章节数据
+    fetch(`${API_BASE_URL}/api/chapters`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.code === 200 && result.data && result.data.chapters && result.data.chapters.length > 0) {
+                // 清空现有选项
+                chapterSelect.innerHTML = '';
+                
+                // 按章节编号排序
+                const sortedChapters = result.data.chapters.sort((a, b) => 
+                    a.chapter_number - b.chapter_number
+                );
+                
+                // 添加章节选项
+                sortedChapters.forEach(chapter => {
+                    // 添加中文选项
+                    const optionZh = document.createElement('option');
+                    optionZh.value = chapter.chapter_number;
+                    optionZh.textContent = `第${chapter.chapter_number}章：${chapter.title_zh || ''}`;
+                    optionZh.classList.add('zh');
+                    chapterSelect.appendChild(optionZh);
+                    
+                    // 添加英文选项
+                    const optionEn = document.createElement('option');
+                    optionEn.value = chapter.chapter_number;
+                    optionEn.textContent = `Chapter ${chapter.chapter_number}: ${chapter.title_en || ''}`;
+                    optionEn.classList.add('en');
+                    chapterSelect.appendChild(optionEn);
+                });
+                
+                console.log('章节选择器刷新完成，选项数量:', sortedChapters.length);
+                
+                // 添加选择器变更事件
+                addChapterSelectChangeEvent(chapterSelect);
+                
+                // 尝试选择之前选中的章节
+                if (currentSelectedValue) {
+                    const selector = document.body.classList.contains('en-mode') 
+                        ? `option.en[value="${currentSelectedValue}"]` 
+                        : `option.zh[value="${currentSelectedValue}"]`;
+                    
+                    const targetOption = chapterSelect.querySelector(selector);
+                    if (targetOption) {
+                        targetOption.selected = true;
+                    } else {
+                        // 如果之前选中的选项不存在，则选择最新添加的章节
+                        const latestChapterNumber = sortedChapters[sortedChapters.length - 1].chapter_number;
+                        const latestSelector = document.body.classList.contains('en-mode')
+                            ? `option.en[value="${latestChapterNumber}"]`
+                            : `option.zh[value="${latestChapterNumber}"]`;
+                        
+                        const latestOption = chapterSelect.querySelector(latestSelector);
+                        if (latestOption) {
+                            latestOption.selected = true;
+                        }
+                    }
+                } else {
+                    // 默认选中第一个章节
+                    if (document.body.classList.contains('en-mode')) {
+                        const firstEnOption = chapterSelect.querySelector('option.en');
+                        if (firstEnOption) firstEnOption.selected = true;
+                    } else {
+                        const firstZhOption = chapterSelect.querySelector('option.zh');
+                        if (firstZhOption) firstZhOption.selected = true;
+                    }
+                }
+                
+                // 触发change事件，更新内容
+                const event = new Event('change');
+                chapterSelect.dispatchEvent(event);
+                
+                // 显示通知
+                showNotification('章节选择器已更新', 'success');
+            } else {
+                // 没有数据时显示提示
+                chapterSelect.innerHTML = '<option disabled selected class="zh">暂无章节数据</option><option disabled selected class="en">No chapters available</option>';
+                console.error('未获取到章节数据');
+                showNotification('刷新章节选择器失败：未获取到数据', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('刷新章节选择器出错:', error);
+            chapterSelect.innerHTML = '<option disabled selected class="zh">刷新失败</option><option disabled selected class="en">Refresh failed</option>';
+            showNotification('刷新章节选择器失败: ' + error.message, 'error');
+        });
+}
+
+// 将刷新章节选择器的函数暴露到全局，使其他组件可以调用
+window.PreClass = window.PreClass || {};
+window.PreClass.refreshChapterSelector = refreshChapterSelector; 
