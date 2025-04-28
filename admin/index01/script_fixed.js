@@ -1519,6 +1519,8 @@ function initCoursewareDesign() {
             const modal = document.getElementById('contentGenerateModal');
             if (modal) {
                 modal.classList.add('active');
+                // 初始化内容生成模态框，确保关闭按钮正常工作
+                initContentGenerateModal();
             } else {
                 console.log('Content generate modal not found');
             }
@@ -1544,57 +1546,167 @@ function initCoursewareDesign() {
     
     // 幻灯片缩略图交互
     const thumbnails = coursewareContent.querySelectorAll('.thumbnail-item');
-    thumbnails.forEach(thumb => {
-        thumb.addEventListener('click', function() {
-            thumbnails.forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
+    
+    thumbnails.forEach(thumbnail => {
+        thumbnail.addEventListener('click', function() {
+            // 处理缩略图点击
+            console.log('Thumbnail clicked:', this.getAttribute('data-slide'));
         });
     });
-    
-    // 初始化PPTist iframe
-    initPPTistFrame();
 }
 
 /**
- * 初始化PPTist iframe
+ * 初始化内容生成模态框
+ * 处理内容生成模态框的打开、关闭和交互功能
  */
-function initPPTistFrame() {
-    const pptistFrame = document.getElementById('pptistFrame');
-    if (!pptistFrame) {
-        console.log('PPTist iframe not found');
+function initContentGenerateModal() {
+    const modal = document.getElementById('contentGenerateModal');
+    if (!modal) {
+        console.log('Content generate modal not found');
         return;
     }
     
-    // 监听iframe加载完成事件
-    pptistFrame.addEventListener('load', function() {
-        console.log('PPTist iframe loaded');
-        showNotification('PPTist编辑器已加载完成', 'success');
-        
-        // 尝试向iframe发送消息(可用于后续的通信需求)
-        try {
-            pptistFrame.contentWindow.postMessage({
-                type: 'init',
-                source: 'courseware-platform'
-            }, '*');
-        } catch (error) {
-            console.error('Error sending message to PPTist iframe:', error);
-        }
+    const closeBtn = modal.querySelector('.close-btn');
+    const cancelBtn = modal.querySelector('.btn-cancel');
+    const generateBtn = modal.querySelector('.generate-btn');
+    const tabBtns = modal.querySelectorAll('.generate-tab-btn');
+    const tabContents = modal.querySelectorAll('.generate-tab-content');
+    const styleBtns = modal.querySelectorAll('.style-btn');
+    const sizeBtns = modal.querySelectorAll('.size-btn');
+    
+    // 关闭弹窗
+    function closeModal() {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+        console.log('Content generate modal closed');
+    }
+    
+    // 移除所有现有的事件监听器（通过克隆和替换实现）
+    if (closeBtn) {
+        const newCloseBtn = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+        newCloseBtn.addEventListener('click', closeModal);
+    }
+    
+    if (cancelBtn) {
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        newCancelBtn.addEventListener('click', closeModal);
+    }
+    
+    // 切换选项卡
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // 移除所有选项卡的激活状态
+            tabBtns.forEach(tb => tb.classList.remove('active'));
+            tabContents.forEach(tc => tc.classList.remove('active'));
+            
+            // 激活当前选项卡
+            btn.classList.add('active');
+            const tabId = btn.getAttribute('data-tab');
+            document.getElementById(`${tabId}-content`).classList.add('active');
+        });
     });
     
-    // 监听来自iframe的消息(可用于后续的通信需求)
-    window.addEventListener('message', function(event) {
-        // 确保消息来源是我们的iframe
-        if (event.source === pptistFrame.contentWindow) {
-            console.log('Received message from PPTist iframe:', event.data);
+    // 切换风格和尺寸按钮
+    function toggleButtons(buttons) {
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // 移除同组按钮的激活状态
+                btn.parentElement.querySelectorAll('.style-btn, .size-btn').forEach(b => {
+                    b.classList.remove('active');
+                });
+                // 激活当前按钮
+                btn.classList.add('active');
+            });
+        });
+    }
+    
+    toggleButtons(styleBtns);
+    toggleButtons(sizeBtns);
+    
+    // 生成按钮点击事件
+    if (generateBtn) {
+        generateBtn.addEventListener('click', () => {
+            const activeTab = document.querySelector('.generate-tab-content.active');
+            const resultPlaceholder = activeTab.querySelector('.result-placeholder');
+            const generatedContent = activeTab.querySelector('.generated-text, .generated-images');
             
-            // 处理不同类型的消息
-            if (event.data.type === 'save') {
-                showNotification('课件已保存', 'success');
-            } else if (event.data.type === 'export') {
-                showNotification('课件已导出', 'success');
+            // 显示加载状态
+            resultPlaceholder.innerHTML = `
+                <i class="fas fa-spinner fa-spin"></i>
+                <p class="zh">正在生成中，请稍候...</p>
+                <p class="en">Generating, please wait...</p>
+            `;
+            resultPlaceholder.style.display = 'flex';
+            
+            if (generatedContent) {
+                generatedContent.style.display = 'none';
             }
-        }
-    });
+            
+            // 模拟生成过程 (这里可以替换为实际的API调用)
+            setTimeout(() => {
+                resultPlaceholder.style.display = 'none';
+                
+                if (generatedContent) {
+                    generatedContent.style.display = 'block';
+                    
+                    // 根据不同的标签页填充不同的内容
+                    if (activeTab.id === 'text2text-content') {
+                        const generatedText = activeTab.querySelector('.generated-text');
+                        if (generatedText) {
+                            generatedText.innerHTML = `
+                                <h4>中国传统绘画的特点与技法</h4>
+                                <p>中国传统绘画有着悠久的历史，其独特的艺术特点和技法形成了与西方绘画截然不同的审美体系。</p>
+                                <h5>一、中国传统绘画的主要特点</h5>
+                                <ol>
+                                    <li><strong>以线造型</strong>：中国画以线条为主要造型手段，讲究"线中有骨，骨中有神"。</li>
+                                    <li><strong>写意精神</strong>：追求意境的表达，不拘泥于形似，而重在传达画家的思想情感。</li>
+                                    <li><strong>虚实结合</strong>：画面中往往留有空白，形成"留白"艺术，使观者有想象的空间。</li>
+                                    <li><strong>诗书画印结合</strong>：中国画常将诗词、书法、印章融为一体，形成独特的艺术形式。</li>
+                                </ol>
+                                <h5>二、主要技法</h5>
+                                <ol>
+                                    <li><strong>工笔</strong>：细腻精工，注重细节刻画，多用于人物、花鸟画。</li>
+                                    <li><strong>写意</strong>：大胆潇洒，重在表达意境，多用于山水、花鸟画。</li>
+                                    <li><strong>墨分五色</strong>：利用水墨浓淡变化，表现出丰富的层次和质感。</li>
+                                    <li><strong>皴法</strong>：表现山石质感和结构的特殊技法，如披麻皴、斧劈皴等。</li>
+                                </ol>
+                            `;
+                        }
+                    } else if (activeTab.id === 'text2img-content') {
+                        const generatedImages = activeTab.querySelector('.generated-images');
+                        if (generatedImages) {
+                            generatedImages.innerHTML = `
+                                <div class="image-grid">
+                                    <div class="generated-image-item">
+                                        <img src="../picture/generated1.jpg" alt="Generated Image 1">
+                                    </div>
+                                    <div class="generated-image-item">
+                                        <img src="../picture/generated2.jpg" alt="Generated Image 2">
+                                    </div>
+                                    <div class="generated-image-item">
+                                        <img src="../picture/generated3.jpg" alt="Generated Image 3">
+                                    </div>
+                                    <div class="generated-image-item">
+                                        <img src="../picture/generated4.jpg" alt="Generated Image 4">
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+                
+                // 启用操作按钮
+                const actionBtns = activeTab.querySelectorAll('.result-action-btn');
+                actionBtns.forEach(btn => {
+                    btn.disabled = false;
+                });
+                
+                showNotification('内容生成完成！', 'success');
+            }, 2000);
+        });
+    }
 }
 
 /**
