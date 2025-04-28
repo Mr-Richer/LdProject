@@ -294,24 +294,24 @@ function initChapterModal() {
             if (window.ChapterUpload && typeof window.ChapterUpload.submitNewChapter === 'function') {
                 // 使用ChapterUpload组件的方法提交表单
                 console.log('使用ChapterUpload组件提交表单');
-                try {
-                    // 显示加载状态
+            try {
+                // 显示加载状态
                     const originalBtnText = btn.innerHTML;
-                    btn.disabled = true;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="zh">保存中...</span><span class="en">Saving...</span>';
-                    
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="zh">保存中...</span><span class="en">Saving...</span>';
+                
                     // 调用ChapterUpload的提交方法
                     await window.ChapterUpload.submitNewChapter();
-                    
-                    // 关闭模态框
-                    closeModal();
-                    
+                
+                // 关闭模态框
+                closeModal();
+                
                     // 重新加载章节列表
                     await loadChapters();
-                    
-                    // 更新章节统计数据
-                    updateChapterStats();
-                    
+                
+                // 更新章节统计数据
+                updateChapterStats();
+                
                     // 刷新课前章节选择器
                     if (window.PreClass && typeof window.PreClass.refreshChapterSelector === 'function') {
                         // 使用短延迟，确保章节创建完全完成后再刷新选择器
@@ -325,13 +325,13 @@ function initChapterModal() {
                     if (typeof window.ChapterUpload.refreshAllSelectors === 'function') {
                         window.ChapterUpload.refreshAllSelectors();
                     }
-                } catch (error) {
-                    console.error('保存章节时出错:', error);
-                    showNotification(`保存失败: ${error.message}`, 'error');
-                } finally {
-                    // 恢复按钮状态
-                    btn.disabled = false;
-                    btn.innerHTML = '<span class="zh">保存</span><span class="en">Save</span>';
+            } catch (error) {
+                console.error('保存章节时出错:', error);
+                showNotification(`保存失败: ${error.message}`, 'error');
+            } finally {
+                // 恢复按钮状态
+                btn.disabled = false;
+                btn.innerHTML = '<span class="zh">保存</span><span class="en">Save</span>';
                 }
             } else {
                 // ChapterUpload组件不可用，显示错误
@@ -1857,7 +1857,7 @@ function initKnowledgeExpansion() {
             }, 1500);
         });
     }
-}
+} 
 
 /**
  * 刷新章节选择器

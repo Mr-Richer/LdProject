@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek语言模型聊天界面</title>
+    <style>
+        :root {
+            --primary-color: #4a6bdf;
+            --primary-dark: #3a5bdf;
+            --secondary-color: #f3f4f6;
+            --text-color: #333;
+            --light-text: #666;
+            --border-color: #e5e7eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+            background-color: #f9fafb;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .model-selector {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .model-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .model-option input {
+            margin-right: 6px;
+        }
+        
+        .model-option label {
+            font-weight: 500;
+        }
+        
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px 8px 0 0;
+            background-color: white;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            background-color: var(--primary-color);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+            border-bottom-right-radius: 2px;
+        }
+        
+        .bot-message {
+            background-color: var(--secondary-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            white-space: pre-wrap;
+        }
+        
+        .message-time {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: right;
+            margin-top: 5px;
+        }
+        
+        .bot-message .message-time {
+            color: var(--light-text);
+        }
+        
+        .input-area {
+            display: flex;
+            margin-top: 5px;
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-right: none;
+            border-radius: 0 0 0 8px;
+            outline: none;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            min-height: 50px;
+            max-height: 150px;
+        }
+        
+        .message-input:focus {
+            border-color: var(--primary-color);
+        }
+        
+        .send-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1rem;
+            border-radius: 0 0 8px 0;
+            transition: background-color 0.2s;
+        }
+        
+        .send-button:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .send-button:disabled {
+            background-color: var(--border-color);
+            cursor: not-allowed;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 10px 15px;
+            background-color: var(--secondary-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            align-self: flex-start;
+            max-width: 80%;
+        }
+        
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--light-text);
+            margin-right: 5px;
+            animation: typing 1s infinite;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+            margin-right: 0;
+        }
+        
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .status-message {
+            text-align: center;
+            padding: 8px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .status-message.error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error-color);
+        }
+        
+        .status-message.success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+        
+        .stream-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            justify-content: flex-end;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            margin-right: 8px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+        
+        .toggle-label {
+            font-size: 0.9rem;
+            color: var(--light-text);
+        }
+        
+        .control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .clear-button {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--light-text);
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .clear-button:hover {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                height: 100vh;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DeepSeek语言模型聊天界面</h1>
+            <p>选择聊天模型并开始对话</p>
+        </header>
+        
+        <div class="model-selector">
+            <div class="model-option">
+                <input type="radio" id="openrouter" name="model" value="openrouter" checked>
+                <label for="openrouter">OpenRouter (deepseek-chat-v3-0324)</label>
+            </div>
+            <div class="model-option">
+                <input type="radio" id="chutes" name="model" value="chutes">
+                <label for="chutes">Chutes (DeepSeek-V3-0324)</label>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <button class="clear-button" onclick="chatApp.clearChat()">清空对话</button>
+            
+            <div class="stream-toggle">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="stream-toggle">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label">逐字显示回复</span>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="message bot-message">
+                    您好，我是基于DeepSeek的AI助手。请问有什么我可以帮助您的？
+                    <div class="message-time">
+                        今天 12:00
+                    </div>
+                </div>
+            </div>
+            
+            <div class="typing-indicator" id="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            
+            <div class="input-area">
+                <textarea 
+                    class="message-input" 
+                    id="message-input" 
+                    placeholder="输入您的消息..."
+                    rows="1"
+                    onkeydown="chatApp.handleKeyDown(event)"
+                ></textarea>
+                <button class="send-button" id="send-button" onclick="chatApp.sendMessage()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入外部JS文件 -->
+    <script src="chat.js"></script>
+    <script>
+        // 初始化聊天界面
+        document.addEventListener('DOMContentLoaded', function() {
+            chatApp.init();
+            
+            // 添加系统提示到历史记录
+            window.chatHistory = [{
+                role: 'system',
+                content: '你是一个有帮助的助手，基于DeepSeek大型语言模型。你能够提供信息、回答问题和进行对话。'
+            }];
+        });
+    </script>
+</body>
+</html> 
