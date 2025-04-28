@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 章节上传样式 -->
+    <link rel="stylesheet" href="../src/styles/chapter-upload.css">
 </head>
 <body>
     <div class="app-container">
@@ -259,6 +261,21 @@
                                             </div>
                                             <input type="file" class="file-input" id="coverImage" name="cover_image" accept="image/*">
                                             <input type="hidden" id="coverImagePath" name="cover_image_path">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label zh">课件文件</label>
+                                        <label class="form-label en">Courseware File</label>
+                                        <div class="file-upload">
+                                            <div class="file-preview">
+                                                <i class="fas fa-file-powerpoint"></i>
+                                            </div>
+                                            <input type="file" class="file-input" id="coursewareFile" name="courseware_file" accept=".ppt,.pptx,.pptist">
+                                            <input type="hidden" id="coursewareFilePath" name="courseware_file_path">
+                                            <div class="upload-hint">
+                                                <span class="zh">支持 .ppt, .pptx, .pptist 格式</span>
+                                                <span class="en">Supports .ppt, .pptx, .pptist formats</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="form-group">
@@ -4534,6 +4551,10 @@
     </div>
     
     <script src="script_fixed.js"></script>
+    <!-- 配置文件（在其他脚本之前加载）-->
+    <script src="../src/config.js"></script>
+    <!-- 章节上传脚本 -->
+    <script src="../src/components/chapter/ChapterUpload.js"></script>
 </body>
 </html>
 

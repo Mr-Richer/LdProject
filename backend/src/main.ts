@@ -16,8 +16,8 @@ async function bootstrap() {
   app.enableCors();
   
   // 配置请求体大小限制
-  app.use(bodyParser.json({ limit: process.env.MAX_FILE_SIZE || '10mb' }));
-  app.use(bodyParser.urlencoded({ limit: process.env.MAX_FILE_SIZE || '10mb', extended: true }));
+  app.use(bodyParser.json({ limit: process.env.MAX_FILE_SIZE || '100mb' }));
+  app.use(bodyParser.urlencoded({ limit: process.env.MAX_FILE_SIZE || '100mb', extended: true }));
   
   // 配置静态文件服务
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {

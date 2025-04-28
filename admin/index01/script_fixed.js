@@ -3,8 +3,6 @@ window.isOfflineMode = false; // 设置为false，从API获取实际数据
 
 // API配置
 const API_BASE_URL = 'http://localhost:3000'; // 开发环境
-// const API_BASE_URL = 'https://your-domain.com'; // 生产环境 - 部署时修改为实际地址
-
 // 添加顶级样式，确保导航按钮总是可见
 const topLevelStyle = document.createElement('style');
 topLevelStyle.textContent = `

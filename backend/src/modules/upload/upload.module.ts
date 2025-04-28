@@ -35,7 +35,7 @@ import { v4 as uuidv4 } from 'uuid';
           },
         }),
         limits: {
-          fileSize: 1024 * 1024 * 10, // 10MB
+          fileSize: 1024 * 1024 * 100, // 100MB
         },
       }),
     }),
