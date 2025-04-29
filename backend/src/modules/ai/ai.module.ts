@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AiService } from './ai.service';
 import { QuizController } from './quiz.controller';
 import { ChaptersModule } from '../chapters/chapters.module';
+import { PptController } from './ppt.controller';
 
 @Module({
   imports: [
@@ -10,7 +11,7 @@ import { ChaptersModule } from '../chapters/chapters.module';
     ChaptersModule
   ],
   providers: [AiService],
-  controllers: [QuizController],
+  controllers: [QuizController, PptController],
   exports: [AiService],
 })
 export class AiModule {} 
