@@ -137,6 +137,164 @@ ChapterPptService.getPptPathByChapterId = async function(chapterId) {
 };
 
 /**
+ * 创建并返回一个加载指示器元素
+ * @param {string} message - 显示的消息
+ * @returns {HTMLElement} 加载指示器元素
+ */
+ChapterPptService.createLoadingIndicator = function(message = '正在加载PPT，请稍候...') {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading-indicator';
+    
+    // 添加样式
+    loadingDiv.style.position = 'absolute';
+    loadingDiv.style.top = '0';
+    loadingDiv.style.left = '0';
+    loadingDiv.style.width = '100%';
+    loadingDiv.style.height = '100%';
+    loadingDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+    loadingDiv.style.display = 'flex';
+    loadingDiv.style.flexDirection = 'column';
+    loadingDiv.style.alignItems = 'center';
+    loadingDiv.style.justifyContent = 'center';
+    loadingDiv.style.zIndex = '1000';
+    
+    // 添加内容
+    loadingDiv.innerHTML = `
+        <div class="spinner" style="
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        "></div>
+        <p style="
+            font-size: 16px;
+            color: #333;
+            margin: 0;
+            font-weight: bold;
+        ">${message}</p>
+        <p class="loading-status" style="
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0 0 0;
+        ">准备中...</p>
+    `;
+    
+    // 添加动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    return loadingDiv;
+};
+
+/**
+ * 更新加载指示器状态
+ * @param {HTMLElement} loadingDiv - 加载指示器元素
+ * @param {string} status - 状态文本
+ */
+ChapterPptService.updateLoadingStatus = function(loadingDiv, status) {
+    if (!loadingDiv) return;
+    
+    const statusElement = loadingDiv.querySelector('.loading-status');
+    if (statusElement) {
+        statusElement.textContent = status;
+    }
+};
+
+/**
+ * 显示加载指示器
+ * @param {string} message - 显示的消息
+ * @returns {HTMLElement} 加载指示器元素
+ */
+ChapterPptService.showLoading = function(message) {
+    // 获取PPTist容器
+    const container = document.querySelector('.pptist-container');
+    if (!container) return null;
+    
+    // 确保容器有相对定位
+    container.style.position = 'relative';
+    
+    // 移除已有的加载指示器
+    const oldLoading = container.querySelector('.loading-indicator');
+    if (oldLoading) container.removeChild(oldLoading);
+    
+    // 创建新的加载指示器
+    const loadingDiv = this.createLoadingIndicator(message);
+    container.appendChild(loadingDiv);
+    
+    return loadingDiv;
+};
+
+/**
+ * 隐藏加载指示器
+ * @param {HTMLElement} loadingDiv - 加载指示器元素
+ * @param {boolean} success - 是否成功
+ * @param {string} message - 显示的消息
+ */
+ChapterPptService.hideLoading = function(loadingDiv, success = true, message = '') {
+    if (!loadingDiv) return;
+    
+    if (success) {
+        // 成功时添加淡出动画
+        loadingDiv.style.transition = 'opacity 0.3s ease';
+        loadingDiv.style.opacity = '0';
+        
+        // 淡出后删除元素
+        setTimeout(() => {
+            if (loadingDiv.parentNode) {
+                loadingDiv.parentNode.removeChild(loadingDiv);
+            }
+        }, 300);  // 从500ms减少到300ms
+    } else {
+        // 失败时显示错误信息
+        loadingDiv.innerHTML = `
+            <div style="
+                color: #e74c3c;
+                font-size: 40px;
+                margin-bottom: 15px;
+            ">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <p style="
+                font-size: 16px;
+                color: #e74c3c;
+                margin: 0;
+                font-weight: bold;
+            ">加载失败</p>
+            <p style="
+                font-size: 14px;
+                color: #666;
+                margin: 5px 0 0 0;
+                max-width: 80%;
+                text-align: center;
+            ">${message || '无法加载PPT文件'}</p>
+        `;
+        
+        // 3秒后关闭
+        setTimeout(() => {
+            if (loadingDiv.parentNode) {
+                loadingDiv.style.transition = 'opacity 0.5s ease';
+                loadingDiv.style.opacity = '0';
+                
+                setTimeout(() => {
+                    if (loadingDiv.parentNode) {
+                        loadingDiv.parentNode.removeChild(loadingDiv);
+                    }
+                }, 300);  // 从500ms减少到300ms
+            }
+        }, 2000);  // 从3000ms减少到2000ms
+    }
+};
+
+/**
  * 加载PPT文件到PPTist
  * @param {string} pptPath - PPT文件路径
  */
@@ -167,6 +325,13 @@ ChapterPptService.loadPptToEditor = function(pptPath) {
         
         console.log(`正在加载PPT文件: ${fullPptUrl}`);
         
+        // 显示加载指示器
+        const loadingIndicator = this.showLoading('正在加载PPT文件');
+        this.updateLoadingStatus(loadingIndicator, '正在准备文件...');
+        
+        // 保存加载指示器引用，以便在消息监听器中使用
+        this.currentLoadingIndicator = loadingIndicator;
+        
         // 发送加载命令到PPTist - 修改为使用支持的命令类型
         iframe.contentWindow.postMessage({
             type: 'pptist-command',
@@ -177,9 +342,15 @@ ChapterPptService.loadPptToEditor = function(pptPath) {
         }, '*');
         
         console.log('PPT加载命令已发送到PPTist');
+        this.updateLoadingStatus(loadingIndicator, '正在解析PPT文件...');
     } catch (error) {
         console.error('加载PPT到编辑器失败:', error);
-        alert(`加载PPT失败: ${error.message}`);
+        
+        // 显示错误信息
+        const loadingIndicator = this.currentLoadingIndicator || this.showLoading('加载失败');
+        this.hideLoading(loadingIndicator, false, error.message);
+        
+        this.currentLoadingIndicator = null;
     }
 };
 
@@ -189,54 +360,30 @@ ChapterPptService.loadPptToEditor = function(pptPath) {
  */
 ChapterPptService.loadPptByChapterId = async function(chapterId) {
     try {
-        // 显示加载中提示
-        const container = document.querySelector('.pptist-container');
-        if (container) {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'loading-indicator';
-            loadingDiv.innerHTML = '<div class="spinner"></div><p>正在加载PPT，请稍候...</p>';
-            loadingDiv.style.position = 'absolute';
-            loadingDiv.style.top = '50%';
-            loadingDiv.style.left = '50%';
-            loadingDiv.style.transform = 'translate(-50%, -50%)';
-            loadingDiv.style.zIndex = '1000';
-            loadingDiv.style.background = 'rgba(255,255,255,0.8)';
-            loadingDiv.style.padding = '20px';
-            loadingDiv.style.borderRadius = '5px';
-            container.style.position = 'relative';
-            
-            // 移除之前的loading
-            const oldLoading = container.querySelector('.loading-indicator');
-            if (oldLoading) container.removeChild(oldLoading);
-            
-            container.appendChild(loadingDiv);
-        }
-        
         console.log(`开始加载章节编号${chapterId}的PPT文件...`);
+        
+        // 显示加载指示器
+        const loadingIndicator = this.showLoading('正在获取章节PPT数据');
+        this.updateLoadingStatus(loadingIndicator, '正在查询章节信息...');
+        
+        // 保存加载指示器引用
+        this.currentLoadingIndicator = loadingIndicator;
         
         // 获取PPT路径
         const pptPath = await this.getPptPathByChapterId(chapterId);
         
+        this.updateLoadingStatus(loadingIndicator, '已找到PPT文件，正在准备加载...');
+        
         // 加载PPT到编辑器
         this.loadPptToEditor(pptPath);
-        
-        // 移除加载提示
-        setTimeout(() => {
-            const loadingDiv = document.querySelector('.loading-indicator');
-            if (loadingDiv && loadingDiv.parentNode) {
-                loadingDiv.parentNode.removeChild(loadingDiv);
-            }
-        }, 2000);
-        
     } catch (error) {
         console.error(`加载章节${chapterId}的PPT失败:`, error);
-        alert(`加载章节PPT失败: ${error.message}`);
         
-        // 移除加载提示
-        const loadingDiv = document.querySelector('.loading-indicator');
-        if (loadingDiv && loadingDiv.parentNode) {
-            loadingDiv.parentNode.removeChild(loadingDiv);
-        }
+        // 显示错误信息
+        const loadingIndicator = this.currentLoadingIndicator || this.showLoading('加载失败');
+        this.hideLoading(loadingIndicator, false, `加载章节PPT失败: ${error.message}`);
+        
+        this.currentLoadingIndicator = null;
     }
 };
 
@@ -244,35 +391,171 @@ ChapterPptService.loadPptByChapterId = async function(chapterId) {
  * 监听来自PPTist的消息
  */
 ChapterPptService.setupMessageListener = function() {
-    window.addEventListener('message', function(event) {
+    // 保存loading状态的变量和超时清理
+    let loadingTimeout = null;
+    
+    // 设置加载超时检测（防止长时间显示加载中状态）
+    this.setupLoadingTimeout = function(timeout = 15000) {
+        // 清除之前的超时
+        if (loadingTimeout) {
+            clearTimeout(loadingTimeout);
+        }
+        
+        // 设置新的超时
+        loadingTimeout = setTimeout(() => {
+            console.log('加载超时，强制清除加载指示器');
+            if (this.currentLoadingIndicator) {
+                this.hideLoading(this.currentLoadingIndicator, true);
+                this.currentLoadingIndicator = null;
+            }
+            loadingTimeout = null;
+        }, timeout);
+    };
+    
+    // 使用bind确保回调中的this指向ChapterPptService
+    const messageHandler = function(event) {
         // 验证消息来源
         const iframe = document.getElementById('pptistFrame');
         if (!iframe || event.source !== iframe.contentWindow) return;
         
         // 处理消息
         if (event.data && event.data.type === 'pptist-event') {
-            switch (event.data.action) {
+            const { action, data, error } = event.data;
+            console.log('收到PPTist事件:', action, data || error || '');
+            
+            switch (action) {
+                case 'ppt-loading':
+                    // PPTist开始加载PPT
+                    if (this.currentLoadingIndicator) {
+                        // 如果data包含stage信息，显示更详细的状态
+                        if (data && data.stage) {
+                            let statusText = '正在加载...';
+                            
+                            switch(data.stage) {
+                                case 'fetching':
+                                    statusText = '正在获取PPT文件...';
+                                    break;
+                                case 'processing':
+                                    statusText = '正在处理PPT数据...';
+                                    break;
+                                case 'reading':
+                                    statusText = '正在读取PPT内容...';
+                                    break;
+                                case 'importing':
+                                    statusText = '正在导入PPT内容...';
+                                    break;
+                                case 'rendering':
+                                    statusText = '正在渲染PPT...';
+                                    break;
+                                case 'parsing-pptx':
+                                    statusText = '正在解析PPTX文件...';
+                                    break;
+                                case 'parsing-pptist':
+                                    statusText = '正在解析PPTist文件...';
+                                    break;
+                                case 'finalizing':
+                                    statusText = '正在完成加载...';
+                                    break;
+                                default:
+                                    statusText = '正在加载PPT...';
+                            }
+                            
+                            this.updateLoadingStatus(this.currentLoadingIndicator, statusText);
+                        } else {
+                            this.updateLoadingStatus(this.currentLoadingIndicator, '正在导入PPT文件...');
+                        }
+                        
+                        // 设置加载超时保护（15秒）
+                        this.setupLoadingTimeout();
+                    }
+                    break;
+                    
                 case 'ppt-loaded':
-                    console.log('PPT模块加载成功');
+                    // PPT加载成功
+                    console.log('PPT文件加载成功');
+                    
+                    // 清除加载超时
+                    if (loadingTimeout) {
+                        clearTimeout(loadingTimeout);
+                        loadingTimeout = null;
+                    }
+                    
+                    // 更新加载状态并添加成功动画
+                    if (this.currentLoadingIndicator) {
+                        this.updateLoadingStatus(this.currentLoadingIndicator, '加载成功，显示内容中...');
+                        
+                        // 确保有足够的时间让PPT实际渲染出来
+                        // 如果PPT已经渲染完成，会快速隐藏加载指示器
+                        // 如果渲染还在进行，会等待一会儿以确保用户体验良好
+                        setTimeout(() => {
+                            // 检查一下PPTist iframe是否真的渲染了内容
+                            const iframe = document.getElementById('pptistFrame');
+                            if (iframe && iframe.contentDocument) {
+                                try {
+                                    // 检查是否有slides元素作为渲染成功的标志
+                                    const slideElements = iframe.contentDocument.querySelectorAll('.slide-content-element');
+                                    // 检查是否有editor元素作为基本渲染的标志
+                                    const editorElements = iframe.contentDocument.querySelectorAll('.editor');
+                                    
+                                    console.log(`检测到 ${slideElements.length} 个幻灯片元素和 ${editorElements.length} 个编辑器元素`);
+                                    
+                                    // 如果没有检测到渲染元素，可能需要额外延迟
+                                    if (slideElements.length === 0 && editorElements.length === 0) {
+                                        console.log('未检测到渲染元素，延长等待时间');
+                                        // 再延长一些时间等待渲染
+                                        setTimeout(() => {
+                                            this.hideLoading(this.currentLoadingIndicator, true);
+                                            this.currentLoadingIndicator = null;
+                                        }, 1000);
+                                        return;
+                                    }
+                                } catch (e) {
+                                    console.warn('检查PPT渲染状态时出错', e);
+                                }
+                            }
+                            
+                            // 隐藏加载指示器
+                            this.hideLoading(this.currentLoadingIndicator, true);
+                            this.currentLoadingIndicator = null;
+                        }, 800);
+                    }
                     break;
                     
                 case 'ppt-load-error':
-                    console.error('PPT加载失败:', event.data.error);
-                    alert(`PPT加载失败: ${event.data.error || '未知错误'}`);
+                    // PPT加载失败
+                    console.error('PPT加载失败:', error);
+                    
+                    // 清除加载超时
+                    if (loadingTimeout) {
+                        clearTimeout(loadingTimeout);
+                        loadingTimeout = null;
+                    }
+                    
+                    // 显示错误信息
+                    if (this.currentLoadingIndicator) {
+                        this.hideLoading(this.currentLoadingIndicator, false, error || '加载PPT文件失败');
+                        this.currentLoadingIndicator = null;
+                    }
                     break;
                     
                 case 'initialized':
+                    // PPTist初始化完成
+                    console.log('PPTist编辑器初始化完成');
+                    
                     // 自动加载当前选中章节的PPT
                     const chapterSelect = document.getElementById('chapter-select');
                     if (chapterSelect && chapterSelect.value) {
                         setTimeout(() => {
-                            ChapterPptService.loadPptByChapterId(chapterSelect.value);
+                            this.loadPptByChapterId(chapterSelect.value);
                         }, 1000);
                     }
                     break;
             }
         }
-    });
+    }.bind(this);
+    
+    // 添加消息监听器
+    window.addEventListener('message', messageHandler);
 };
 
 // 导出服务
