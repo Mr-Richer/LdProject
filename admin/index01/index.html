@@ -584,7 +584,133 @@
                                         </div>
                                         <!-- 使用iframe嵌入PPTist -->
                                         <div class="pptist-container">
-                                            <iframe id="pptistFrame" src="http://localhost:5173" frameborder="0" width="100%" height="600"></iframe>
+                                            <iframe id="pptistFrame" src="http://localhost:5173/" frameborder="0" width="100%" height="600" allow="fullscreen" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+                                            
+                                            <!-- 调试工具区域 -->
+                                            <div class="debug-tools" style="margin-top: 10px; padding: 10px; border: 1px dashed #ccc; display: block;">
+                                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                                    <button id="testPptLoadBtn" style="padding: 5px 10px; background: #f0f0f0; border: 1px solid #ddd; cursor: pointer;">
+                                                        测试加载PPT
+                                                    </button>
+                                                    <button id="toggleDebugBtn" style="padding: 5px 10px; background: #fff0f6; border: 1px solid #ffadd2; cursor: pointer;">
+                                                        隐藏调试面板
+                                                    </button>
+                                                </div>
+                                                <div id="debugOutput" style="margin-top: 10px; padding: 10px; background: #f5f5f5; max-height: 150px; overflow: auto; font-family: monospace; font-size: 12px;">
+                                                    调试输出区域
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 添加PPTist通信脚本 -->
+                                            <script>
+                                                // 调试日志函数
+                                                function debugLog(message, type = 'info') {
+                                                    const debugOutput = document.getElementById('debugOutput');
+                                                    if (debugOutput) {
+                                                        const logItem = document.createElement('div');
+                                                        logItem.style.color = type === 'error' ? 'red' : (type === 'warning' ? 'orange' : 'black');
+                                                        logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                                                        debugOutput.appendChild(logItem);
+                                                        debugOutput.scrollTop = debugOutput.scrollHeight;
+                                                    }
+                                                    
+                                                    console[type](message);
+                                                }
+                                                
+                                                // 在iframe加载完成后初始化通信
+                                                document.getElementById('pptistFrame').onload = function() {
+                                                    debugLog('PPTist iframe 已加载');
+                                                    
+                                                    // 添加消息监听器
+                                                    window.addEventListener('message', function(event) {
+                                                        // 检查消息源安全性（实际生产环境中应当验证origin）
+                                                        try {
+                                                            debugLog(`收到消息: ${JSON.stringify(event.data)}`);
+                                                            
+                                                            if (event.data && event.data.type === 'pptist-event') {
+                                                                debugLog('收到PPTist事件消息: ' + event.data.action);
+                                                                
+                                                                // 处理初始化完成消息
+                                                                if (event.data.action === 'initialized') {
+                                                                    debugLog('PPTist初始化完成');
+                                                                }
+                                                                
+                                                                // 处理PPT加载成功消息
+                                                                if (event.data.action === 'ppt-loaded') {
+                                                                    debugLog('PPT加载成功');
+                                                                }
+                                                                
+                                                                // 处理PPT加载中消息
+                                                                if (event.data.action === 'ppt-loading') {
+                                                                    debugLog('PPT正在加载中');
+                                                                }
+                                                                
+                                                                // 处理PPT加载失败消息
+                                                                if (event.data.action === 'ppt-load-error') {
+                                                                    debugLog('PPT加载失败: ' + event.data.error, 'error');
+                                                                }
+                                                            }
+                                                        } catch (error) {
+                                                            debugLog('处理PPTist消息出错: ' + error.message, 'error');
+                                                        }
+                                                    });
+                                                    
+                                                    // 发送ping消息代替初始化消息
+                                                    try {
+                                                        this.contentWindow.postMessage({
+                                                            type: 'ping'
+                                                        }, '*');
+                                                        debugLog('已发送ping消息');
+                                                    } catch (error) {
+                                                        debugLog('发送ping消息失败: ' + error.message, 'error');
+                                                    }
+                                                    
+                                                    // 初始化调试按钮
+                                                    initDebugButtons();
+                                                };
+                                                
+                                                // 初始化调试按钮
+                                                function initDebugButtons() {
+                                                    // 测试加载按钮
+                                                    const testBtn = document.getElementById('testPptLoadBtn');
+                                                    if (testBtn) {
+                                                        testBtn.addEventListener('click', function() {
+                                                            try {
+                                                                // 获取当前选中的章节ID
+                                                                const chapterSelect = document.getElementById('chapter-select');
+                                                                const chapterId = chapterSelect ? chapterSelect.value : '1';
+                                                                
+                                                                debugLog(`正在测试加载章节${chapterId}的PPT`);
+                                                                
+                                                                // 如果ChapterPptService可用，则调用其加载方法
+                                                                if (window.ChapterPptService && typeof ChapterPptService.loadPptByChapterId === 'function') {
+                                                                    ChapterPptService.loadPptByChapterId(chapterId);
+                                                                } else {
+                                                                    debugLog('ChapterPptService不可用，无法加载PPT', 'error');
+                                                                }
+                                                            } catch (error) {
+                                                                debugLog('测试加载失败: ' + error.message, 'error');
+                                                            }
+                                                        });
+                                                    }
+                                                    
+                                                    // 切换调试面板按钮
+                                                    const toggleDebugBtn = document.getElementById('toggleDebugBtn');
+                                                    const debugTools = document.querySelector('.debug-tools');
+                                                    if (toggleDebugBtn && debugTools) {
+                                                        toggleDebugBtn.addEventListener('click', function() {
+                                                            const debugOutput = document.getElementById('debugOutput');
+                                                            if (debugOutput.style.display === 'none') {
+                                                                debugOutput.style.display = 'block';
+                                                                this.textContent = '隐藏调试面板';
+                                                            } else {
+                                                                debugOutput.style.display = 'none';
+                                                                this.textContent = '显示调试面板';
+                                                            }
+                                                        });
+                                                    }
+                                                }
+                                            </script>
                                         </div>
                                     </div>
                                 </div>
@@ -4332,9 +4458,11 @@
         </div>
     </div>
 
-    <script src="script_fixed.js"></script>
+    <!-- JavaScript 文件 -->
     <!-- 配置文件（在其他脚本之前加载）-->
     <script src="../src/config.js"></script>
+    <script src="script_fixed.js"></script>
+    <script src="../src/services/ChapterPptService.js"></script>
 </body>
 </html>
 

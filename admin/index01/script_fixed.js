@@ -2,8 +2,8 @@
 window.isOfflineMode = false; // 设置为false，从API获取实际数据
 
 // API配置
-const API_BASE_URL = 'http://localhost:3000'; // 开发环境
-window.API_BASE_URL = API_BASE_URL; // 导出给其他模块使用
+window.API_BASE_URL = 'http://localhost:3000'; // 开发环境
+// 不再使用const声明，直接使用全局变量
 
 // 动态加载ChapterUpload组件脚本
 function loadChapterUploadScript() {
@@ -32,87 +32,9 @@ function loadChapterUploadScript() {
 
 // 动态加载PPT模块
 function loadPPTModules() {
-    return new Promise((resolve, reject) => {
-        try {
-            console.log('加载PPT相关模块...');
-            
-            // 首先加载PptistBridge模块
-            const bridgeScript = document.createElement('script');
-            bridgeScript.src = '../src/components/courseware/PptistBridge.js';
-            bridgeScript.type = 'text/javascript';
-            
-            bridgeScript.onload = () => {
-                console.log('PptistBridge模块加载成功');
-                
-                // 然后加载服务模块
-                const serviceScript = document.createElement('script');
-                serviceScript.src = '../src/services/ppt.js';
-                serviceScript.type = 'text/javascript';
-                
-                serviceScript.onload = () => {
-                    console.log('PPT服务模块加载成功');
-                    
-                    // 检查是否成功创建全局对象
-                    if (!window.PptistBridge || !window.PptService) {
-                        console.error('PPT服务模块全局对象未正确创建');
-                        reject(new Error('PPT服务模块初始化失败'));
-                        return;
-                    }
-                    
-                    // 最后加载PptLoader模块
-                    const loaderScript = document.createElement('script');
-                    loaderScript.src = '../src/components/courseware/PptLoader.js';
-                    loaderScript.type = 'text/javascript';
-                    
-                    loaderScript.onload = () => {
-                        console.log('PptLoader模块加载成功');
-                        
-                        // 确认所有模块都已加载并初始化
-                        if (window.PptLoader && typeof window.PptLoader.initAutoLoadPPT === 'function') {
-                            // 等待DOM完全加载后再初始化自动加载功能
-                            setTimeout(() => {
-                                try {
-                                    window.PptLoader.initAutoLoadPPT();
-                                    console.log('PPT自动加载功能已初始化');
-                                    resolve(true);
-                                } catch (error) {
-                                    console.error('初始化PPT自动加载功能失败:', error);
-                                    resolve(false);
-                                }
-                            }, 500);
-                        } else {
-                            console.error('PPT加载器初始化失败：未找到initAutoLoadPPT方法');
-                            resolve(false);
-                        }
-                    };
-                    
-                    loaderScript.onerror = (error) => {
-                        console.error('加载PptLoader模块失败:', error);
-                        reject(new Error('无法加载PptLoader模块'));
-                    };
-                    
-                    document.head.appendChild(loaderScript);
-                };
-                
-                serviceScript.onerror = (error) => {
-                    console.error('加载PPT服务模块失败:', error);
-                    reject(new Error('无法加载PPT服务模块'));
-                };
-                
-                document.head.appendChild(serviceScript);
-            };
-            
-            bridgeScript.onerror = (error) => {
-                console.error('加载PptistBridge模块失败:', error);
-                reject(new Error('无法加载PptistBridge模块'));
-            };
-            
-            document.head.appendChild(bridgeScript);
-            
-        } catch (error) {
-            console.error('加载PPT模块总体失败:', error);
-            reject(error);
-        }
+    return new Promise((resolve) => {
+        console.log('PPT模块加载已被禁用');
+        resolve(false);
     });
 }
 
@@ -931,7 +853,7 @@ function loadChapters() {
     }
     
     // 调用API获取章节数据
-    fetch(`${API_BASE_URL}/api/chapters`)
+    fetch(`${window.API_BASE_URL}/api/chapters`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -971,7 +893,7 @@ function loadChapters() {
  */
 function updateChapterStats() {
     // 获取章节统计数据
-    fetch(`${API_BASE_URL}/api/chapters/stats`)
+    fetch(`${window.API_BASE_URL}/api/chapters/stats`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -1377,7 +1299,7 @@ function processImageUrl(url) {
     // 如果是以/开头的绝对路径，添加API基础URL
     if (url.startsWith('/')) {
         // 去掉API_BASE_URL结尾的斜杠(如果有)
-        const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+        const baseUrl = window.API_BASE_URL.endsWith('/') ? window.API_BASE_URL.slice(0, -1) : window.API_BASE_URL;
         return `${baseUrl}${url}`;
     }
     
@@ -1401,7 +1323,7 @@ function initChapterSelector() {
     chapterSelect.innerHTML = '<option disabled selected>加载中...</option>';
     
     // 获取章节数据
-    fetch(`${API_BASE_URL}/api/chapters`)
+    fetch(`${window.API_BASE_URL}/api/chapters`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -1603,11 +1525,8 @@ function initAIPre() {
     // 初始化课件设计功能
     initCoursewareDesign();
     
-    // 加载PPT模块并初始化自动加载功能
-    loadPPTModules().catch(error => {
-        console.error('初始化PPT模块失败:', error);
-        showNotification('PPT功能初始化失败，请刷新页面重试', 'error');
-    });
+    // PPT模块已被禁用
+    console.log('PPT模块加载已被禁用');
     
     // 加载小测生成模块
     loadScript('../src/components/quizGenerator/QuizGenerator.js')
@@ -1914,7 +1833,7 @@ function refreshChapterSelector() {
     chapterSelect.innerHTML = '<option disabled selected>刷新中...</option>';
     
     // 获取章节数据
-    fetch(`${API_BASE_URL}/api/chapters`)
+    fetch(`${window.API_BASE_URL}/api/chapters`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
