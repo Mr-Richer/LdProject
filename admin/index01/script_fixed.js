@@ -160,6 +160,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 初始化AI助教-课前部分
     initAIPre();
     
+    // 初始化AI助教-课中部分
+    initAIInClass();
+    
     // 初始化签到二维码按钮
     initQRCodeDisplay();
     
@@ -2080,11 +2083,124 @@ function updateInClassContent(chapterNumber, chapterTitle) {
 }
 
 /**
+ * 初始化课中界面
+ */
+function initAIInClass() {
+    // 初始化控制面板切换
+    initClassroomControlPanel();
+    
+    console.log('课中界面初始化完成');
+}
+
+/**
+ * 初始化课堂控制面板
+ */
+function initClassroomControlPanel() {
+    const controlItems = document.querySelectorAll('.control-item');
+    const classroomPanels = document.querySelectorAll('.classroom-panel');
+    
+    if (controlItems.length === 0 || classroomPanels.length === 0) {
+        console.warn('未找到课堂控制面板元素');
+        return;
+    }
+    
+    console.log('初始化课堂控制面板...');
+    
+    controlItems.forEach((item, index) => {
+        item.addEventListener('click', () => {
+            console.log(`点击了控制项: ${index}`);
+            
+            // 移除所有控制项的活动状态
+            controlItems.forEach(i => i.classList.remove('active'));
+            // 为当前点击的控制项添加活动状态
+            item.classList.add('active');
+            
+            // 隐藏所有面板
+            classroomPanels.forEach(panel => panel.classList.remove('active'));
+            // 显示对应的面板
+            if (index < classroomPanels.length) {
+                classroomPanels[index].classList.add('active');
+                console.log(`激活面板: ${classroomPanels[index].id}`);
+            }
+        });
+    });
+    
+    // 课堂计时器功能
+    const pauseBtn = document.querySelector('.class-status .control-btn:nth-child(3)');
+    const stopBtn = document.querySelector('.class-status .control-btn:nth-child(4)');
+    const timeDisplay = document.querySelector('.class-time');
+    const statusBadge = document.querySelector('.status-badge');
+    
+    if (pauseBtn && stopBtn && timeDisplay && statusBadge) {
+        let isPaused = false;
+        let classTime = 0; // 秒数
+        let timerInterval;
+        
+        // 初始化计时器
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (!isPaused) {
+                    classTime++;
+                    updateTimeDisplay();
+                }
+            }, 1000);
+        }
+        
+        // 更新时间显示
+        function updateTimeDisplay() {
+            const hours = Math.floor(classTime / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((classTime % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (classTime % 60).toString().padStart(2, '0');
+            timeDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+        
+        // 暂停/继续按钮
+        pauseBtn.addEventListener('click', () => {
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                pauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+                statusBadge.innerHTML = '<i class="fas fa-circle"></i><span class="zh">课堂已暂停</span><span class="en">Class Paused</span>';
+                statusBadge.classList.remove('active');
+            } else {
+                pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                statusBadge.innerHTML = '<i class="fas fa-circle"></i><span class="zh">课堂进行中</span><span class="en">Class in Progress</span>';
+                statusBadge.classList.add('active');
+            }
+        });
+        
+        // 停止按钮
+        stopBtn.addEventListener('click', () => {
+            if (confirm('确定要结束当前课堂吗？')) {
+                clearInterval(timerInterval);
+                showNotification('课堂已结束', 'success');
+                
+                // 模拟导航到课后页面
+                setTimeout(() => {
+                    const aiPostNav = document.querySelector('.nav-item[data-section="ai-post"]');
+                    if (aiPostNav) {
+                        aiPostNav.click();
+                    }
+                }, 1500);
+            }
+        });
+        
+        // 启动计时器
+        startTimer();
+    }
+}
+
+/**
  * 确保文档加载完成后初始化所有章节选择器
  */
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化课中章节选择器 (课前的已在页面加载时初始化)
     if (typeof initInClassChapterSelector === 'function') {
         initInClassChapterSelector();
+    }
+    
+    // 初始化课中界面
+    if (typeof initAIInClass === 'function') {
+        initAIInClass();
     }
 });
