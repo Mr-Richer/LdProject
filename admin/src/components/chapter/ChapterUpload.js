@@ -351,6 +351,23 @@ async function submitNewChapter() {
                 // window.location.reload(); // 暂时注释掉，避免页面刷新打断用户操作
             }
             
+            // 刷新所有章节选择器
+            if (typeof window.refreshAllChapterSelectors === 'function') {
+                window.refreshAllChapterSelectors();
+            } else {
+                console.log('refreshAllChapterSelectors函数不可用，将使用单独的刷新方法');
+                
+                // 刷新课前章节选择器
+                if (typeof window.initChapterSelector === 'function') {
+                    window.initChapterSelector();
+                }
+                
+                // 尝试刷新课中章节选择器
+                if (typeof window.initInClassChapterSelector === 'function') {
+                    window.initInClassChapterSelector();
+                }
+            }
+            
             // 等待章节加载和DOM更新完成后，滚动到最后一个章节
             setTimeout(() => {
                 const chaptersContainer = document.getElementById('chaptersContainer');
