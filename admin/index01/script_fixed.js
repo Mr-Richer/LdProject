@@ -2398,9 +2398,14 @@ function updateInClassContent(chapterNumber, chapterTitle, lang = 'zh') {
     
     // 触发PPT加载 - 仅在课件展示面板活跃时
     const slidesPanel = document.getElementById('slides-panel');
-    if (slidesPanel && slidesPanel.classList.contains('active') && window.ClassroomController) {
+    if (slidesPanel && slidesPanel.classList.contains('active')) {
         console.log('课件展示面板处于活跃状态，尝试加载PPT');
-        window.ClassroomController.loadChapterPPT(chapterNumber);
+        // 使用新的加载函数
+        if (typeof loadChapterSlides === 'function') {
+            loadChapterSlides(chapterNumber);
+        } else {
+            console.error('找不到loadChapterSlides函数，无法加载PPT');
+        }
     } else {
         console.log('课件展示面板未激活，暂不加载PPT');
     }
@@ -2420,91 +2425,321 @@ function updateInClassContent(chapterNumber, chapterTitle, lang = 'zh') {
  * 初始化课中界面
  */
 function initAIInClass() {
+    console.log('正在初始化课中界面...');
+    
     // 初始化控制面板切换
     initClassroomControlPanel();
     
-    // 加载PPTist相关组件
-    loadPptistComponents().then(() => {
-        // 初始化课件展示部分
-        if (window.ClassroomController) {
-            window.ClassroomController.init();
-        }
+    // 确保加载PptLoader模块
+    loadPPTistServices().then(() => {
+        console.log('PptLoader模块加载完成');
+        initCoursePPTDisplay();
     }).catch(error => {
-        console.error('PPTist组件加载失败:', error);
-        showNotification('课件组件加载失败，请刷新页面重试', 'error');
+        console.error('加载PptLoader模块失败:', error);
+        // 即使PptLoader加载失败，仍然初始化课件展示以便显示演示内容
+        initCoursePPTDisplay();
     });
-    
-    console.log('课中界面初始化完成');
 }
 
 /**
- * 加载PPTist相关组件
+ * 初始化课件PPT展示
  */
-async function loadPptistComponents() {
-    // 加载CSS
-    await loadStylesheet('../src/styles/pptist-player.css');
+function initCoursePPTDisplay() {
+    const slidePreview = document.getElementById('slide-preview');
+    if (!slidePreview) {
+        console.error('未找到幻灯片预览容器，无法初始化课件展示');
+        return;
+    }
     
-    // 加载组件JS
-    await loadScript('../src/components/pptist/PptistPlayer.js');
-    await loadScript('../src/services/PptistService.js');
-    await loadScript('../src/controllers/ClassroomController.js');
+    // 清除原有内容
+    slidePreview.innerHTML = '';
     
-    return true;
+    console.log('正在初始化课中PPT显示组件...');
+    
+    // 创建iframe
+    const iframe = document.createElement('iframe');
+    iframe.id = 'inClassPptFrame';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = 'none';
+    iframe.allowFullscreen = true;
+    
+    // 添加到容器
+    slidePreview.appendChild(iframe);
+    
+    // 设置iframe源 - 使用课前编辑器相同的源
+    const iframeSrc = 'http://localhost:5173/?mode=static&embed=true';
+    console.log('设置PPT iframe源:', iframeSrc);
+    iframe.src = iframeSrc;
+    
+    // 添加iframe加载事件
+    iframe.onload = function() {
+        console.log('PPT iframe加载完成，初始化PPT显示');
+        
+        // 添加跨窗口通信事件监听
+        window.addEventListener('message', function(event) {
+            // 检查消息来源
+            if (event.source !== iframe.contentWindow) return;
+            
+            const message = event.data;
+            console.log('收到PPT iframe消息:', message);
+            
+            // 处理来自iframe的消息
+            if (message && message.type) {
+                switch (message.type) {
+                    case 'ppt-loaded':
+                        console.log('PPT加载完成通知');
+                        // 可以更新UI或状态
+                        updateSlideIndicator(message.currentSlide, message.totalSlides, false);
+                        break;
+                    
+                    case 'slide-change':
+                        console.log(`幻灯片切换: ${message.currentSlide}/${message.totalSlides}`);
+                        // 更新幻灯片指示器
+                        updateSlideIndicator(message.currentSlide, message.totalSlides, false);
+                        break;
+                    
+                    case 'ppt-error':
+                        console.error('PPT错误:', message.error);
+                        showNotification('PPT加载出错: ' + message.error, 'error');
+                        break;
+                }
+            }
+        });
+        
+        // 延迟初始化，确保课中章节选择器已加载
+        setTimeout(function() {
+            // 获取当前选中的章节
+            const chapterSelect = document.getElementById('in-class-chapter-select');
+            if (chapterSelect && chapterSelect.value) {
+                const selectedChapterId = chapterSelect.value;
+                console.log('课中初始化: 加载当前选中章节的PPT:', selectedChapterId);
+                loadChapterSlides(selectedChapterId);
+            } else {
+                console.log('课中初始化: 没有找到章节选择器或未选中章节');
+            }
+            
+            // 添加章节选择变更事件
+            if (chapterSelect) {
+                console.log('为课中章节选择器添加事件监听器');
+                // 移除已有的事件监听器(如果有)
+                chapterSelect.removeEventListener('change', handleChapterSelectChange);
+                // 添加新的事件监听器
+                chapterSelect.addEventListener('change', handleChapterSelectChange);
+            }
+        }, 500);
+    };
+    
+    // iframe加载错误处理
+    iframe.onerror = function(error) {
+        console.error('PPT iframe加载失败:', error);
+        slidePreview.innerHTML = '<div class="ppt-error">PPT显示组件加载失败</div>';
+    };
 }
 
 /**
- * 加载样式表
- * @param {string} url 样式表URL
- * @returns {Promise} Promise对象
+ * 处理章节选择变更事件
+ * @param {Event} event - 变更事件
  */
-function loadStylesheet(url) {
-    return new Promise((resolve, reject) => {
-        // 检查是否已加载
-        const existingLink = document.querySelector(`link[href="${url}"]`);
-        if (existingLink) {
-            resolve(true);
-            return;
+function handleChapterSelectChange(event) {
+    const chapterId = event.target.value;
+    if (!chapterId) return;
+    
+    console.log(`章节选择变更为: ${chapterId}`);
+    
+    // 加载对应章节的PPT
+    loadChapterSlides(chapterId);
+}
+
+/**
+ * 初始化幻灯片控制按钮
+ * @param {HTMLIFrameElement} iframe PPTist iframe元素
+ */
+function initSlideControlButtons(iframe) {
+    const prevButton = document.getElementById('prev-slide-btn');
+    const nextButton = document.getElementById('next-slide-btn');
+    const playButton = document.getElementById('play-slides-btn');
+    
+    // 监听上一张按钮点击
+    if (prevButton) {
+        prevButton.addEventListener('click', () => {
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    type: 'pptist-command',
+                    action: 'prev-slide'
+                }, '*');
+            }
+        });
+    }
+    
+    // 监听下一张按钮点击
+    if (nextButton) {
+        nextButton.addEventListener('click', () => {
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    type: 'pptist-command',
+                    action: 'next-slide'
+                }, '*');
+            }
+        });
+    }
+    
+    // 监听播放/暂停按钮点击
+    if (playButton) {
+        let isPlaying = false;
+        
+        playButton.addEventListener('click', () => {
+            if (!iframe || !iframe.contentWindow) return;
+            
+            isPlaying = !isPlaying;
+            
+            if (isPlaying) {
+                iframe.contentWindow.postMessage({
+                    type: 'pptist-command',
+                    action: 'play',
+                    data: { interval: 5000 }
+                }, '*');
+                
+                playButton.innerHTML = '<i class="fas fa-pause"></i>';
+                playButton.setAttribute('title', '暂停播放');
+            } else {
+                iframe.contentWindow.postMessage({
+                    type: 'pptist-command',
+                    action: 'pause'
+                }, '*');
+                
+                playButton.innerHTML = '<i class="fas fa-play"></i>';
+                playButton.setAttribute('title', '自动播放');
+            }
+        });
+    }
+}
+
+/**
+ * 更新幻灯片指示器
+ * @param {number} current 当前幻灯片索引
+ * @param {number} total 总幻灯片数量
+ * @param {boolean} loading 是否正在加载
+ * @param {string} message 加载消息
+ */
+function updateSlideIndicator(current, total, loading = false, message = '') {
+    const indicator = document.getElementById('slide-indicator');
+    
+    if (!indicator) return;
+    
+    if (loading) {
+        indicator.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message || '加载中...'}`;
+    } else {
+        indicator.textContent = `${current} / ${total}`;
+    }
+}
+
+/**
+ * 加载章节幻灯片
+ * @param {string|number} chapterId 章节ID
+ */
+function loadChapterSlides(chapterId) {
+    if (!chapterId) {
+        console.error('加载幻灯片：章节ID为空');
+        return;
+    }
+    
+    console.log(`正在加载章节${chapterId}的PPT...`);
+    
+    // 更新加载状态
+    updateSlideIndicator(0, 0, true, `正在加载章节${chapterId}的PPT...`);
+    
+    // 检查iframe是否存在
+    const iframe = document.getElementById('inClassPptFrame');
+    if (!iframe || !iframe.contentWindow) {
+        console.error('找不到PPT显示iframe，无法加载PPT');
+        showNotification('PPT显示区域未准备好，请刷新页面', 'error');
+        return;
+    }
+    
+    // 检查PPT功能是否已加载
+    if (window.PptLoader && typeof window.PptLoader.loadChapterPPT === 'function') {
+        try {
+            // 通过PptLoader加载PPT
+            console.log(`使用PptLoader加载章节${chapterId}的PPT`);
+            const result = window.PptLoader.loadChapterPPT(chapterId);
+            
+            if (result === false) {
+                // 如果PptLoader返回失败，使用备用方案
+                console.warn('PptLoader加载失败，使用备用方案');
+                loadDemoSlides(chapterId);
+            }
+        } catch (error) {
+            console.error('调用PptLoader时出错:', error);
+            showNotification('加载PPT时出错，显示演示内容', 'warning');
+            // 发生错误时使用备用方案
+            loadDemoSlides(chapterId);
         }
-        
-        // 创建link元素
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = url;
-        
-        // 设置加载事件
-        link.onload = () => resolve(true);
-        link.onerror = () => reject(new Error(`加载样式表失败: ${url}`));
-        
-        // 添加到文档
-        document.head.appendChild(link);
-    });
+    } else {
+        // 如果PptLoader不可用，直接使用演示模式
+        console.warn('PptLoader不可用，使用备用方案显示演示PPT');
+        loadDemoSlides(chapterId);
+    }
 }
 
 /**
- * 加载脚本
- * @param {string} url 脚本URL
- * @returns {Promise} Promise对象
+ * 加载演示幻灯片（作为备用方案）
+ * @param {string|number} chapterId 章节ID
  */
-function loadScript(url) {
-    return new Promise((resolve, reject) => {
-        // 检查是否已加载
-        const existingScript = document.querySelector(`script[src="${url}"]`);
-        if (existingScript) {
-            resolve(true);
-            return;
-        }
+function loadDemoSlides(chapterId = '1') {
+    console.log(`加载章节${chapterId}的演示PPT...`);
+    
+    const iframe = document.getElementById('inClassPptFrame');
+    if (!iframe || !iframe.contentWindow) {
+        console.error('PPTist iframe不存在或未就绪');
+        return;
+    }
+    
+    // 构建演示PPT数据
+    const demoPPT = {
+        slides: [],
+        thumbnails: []
+    };
+    
+    // 生成简化的演示数据
+    for (let i = 1; i <= 5; i++) {
+        demoPPT.slides.push({
+            id: i.toString(),
+            elements: [
+                {
+                    type: 'text',
+                    id: `title-${i}`,
+                    content: `章节${chapterId} - 幻灯片 ${i}`,
+                    position: { x: 100, y: 50 },
+                    width: 600,
+                    height: 80,
+                    style: {
+                        fontSize: 32,
+                        fontWeight: 'bold',
+                        color: '#333333',
+                        textAlign: 'center'
+                    }
+                }
+            ],
+            background: {
+                type: 'solid',
+                color: '#ffffff'
+            }
+        });
+    }
+    
+    // 发送PPT数据到iframe
+    try {
+        iframe.contentWindow.postMessage({
+            type: 'pptist-command',
+            action: 'load-ppt-data',
+            data: demoPPT
+        }, '*');
         
-        // 创建script元素
-        const script = document.createElement('script');
-        script.src = url;
-        
-        // 设置加载事件
-        script.onload = () => resolve(true);
-        script.onerror = () => reject(new Error(`加载脚本失败: ${url}`));
-        
-        // 添加到文档
-        document.body.appendChild(script);
-    });
+        console.log('已发送演示PPT数据到PPTist');
+    } catch (error) {
+        console.error('发送演示PPT数据失败:', error);
+    }
 }
 
 /**
@@ -2514,31 +2749,66 @@ function initClassroomControlPanel() {
     const controlItems = document.querySelectorAll('.control-item');
     const classroomPanels = document.querySelectorAll('.classroom-panel');
     
-    if (controlItems.length === 0 || classroomPanels.length === 0) {
-        console.warn('未找到课堂控制面板元素');
-        return;
+    // 初始化时隐藏所有面板
+    classroomPanels.forEach(panel => {
+        panel.classList.remove('active');
+    });
+    
+    // 默认显示第一个面板
+    if (classroomPanels[0]) {
+        classroomPanels[0].classList.add('active');
     }
     
-    console.log('初始化课堂控制面板...');
+    // 移除已有的click事件监听器（防止重复绑定）
+    controlItems.forEach(item => {
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+    });
     
-    controlItems.forEach((item, index) => {
+    // 重新获取更新后的元素
+    const updatedControlItems = document.querySelectorAll('.control-item');
+    
+    // 添加点击事件
+    updatedControlItems.forEach((item, index) => {
         item.addEventListener('click', () => {
             console.log(`点击了控制项: ${index}`);
             
-            // 移除所有控制项的活动状态
-            controlItems.forEach(i => i.classList.remove('active'));
-            // 移除所有面板的活动状态
-            classroomPanels.forEach(p => p.classList.remove('active'));
+            // 清除所有面板的活动状态
+            classroomPanels.forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // 清除所有控制项的活动状态
+            updatedControlItems.forEach(cItem => {
+                cItem.classList.remove('active');
+            });
             
             // 添加当前控制项的活动状态
             item.classList.add('active');
+            
             // 添加当前面板的活动状态
             if (classroomPanels[index]) {
                 classroomPanels[index].classList.add('active');
                 
                 // 如果切换到课件展示面板，尝试加载PPT
-                if (index === 1 && window.ClassroomController) {
-                    window.ClassroomController.initPptPlayer();
+                if (index === 1) { // 索引1通常是课件展示面板
+                    // 检查iframe是否存在
+                    const iframe = document.getElementById('inClassPptFrame');
+                    if (iframe) {
+                        console.log('切换到课件展示面板，尝试加载PPT');
+                        // 获取当前选中的章节
+                        const chapterSelect = document.getElementById('in-class-chapter-select');
+                        if (chapterSelect && chapterSelect.value && typeof loadChapterSlides === 'function') {
+                            // 显示通知
+                            showNotification('正在加载章节PPT', 'info');
+                            loadChapterSlides(chapterSelect.value);
+                        } else {
+                            console.log('没有选择章节或加载函数不可用，将加载演示PPT');
+                            if (typeof loadDemoSlides === 'function') {
+                                loadDemoSlides();
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -2550,62 +2820,120 @@ function initClassroomControlPanel() {
     const timeDisplay = document.querySelector('.class-time');
     const statusBadge = document.querySelector('.status-badge');
     
-    if (pauseBtn && stopBtn && timeDisplay && statusBadge) {
-        let isPaused = false;
-        let classTime = 0; // 秒数
-        let timerInterval;
+    // 初始化课堂时间状态
+    let classTimeElapsed = 0;
+    let classTimeInterval = null;
+    let isPaused = false;
+    
+    function updateTimeDisplay() {
+        // 格式化显示时间：小时:分钟:秒
+        const hours = Math.floor(classTimeElapsed / 3600);
+        const minutes = Math.floor((classTimeElapsed % 3600) / 60);
+        const seconds = classTimeElapsed % 60;
         
-        // 初始化计时器
-        function startTimer() {
-            timerInterval = setInterval(() => {
-                if (!isPaused) {
-                    classTime++;
-                    updateTimeDisplay();
-                }
-            }, 1000);
+        // 格式化为两位数显示
+        const timeFormatted = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeDisplay) {
+            timeDisplay.textContent = timeFormatted;
         }
-        
-        // 更新时间显示
-        function updateTimeDisplay() {
-            const hours = Math.floor(classTime / 3600).toString().padStart(2, '0');
-            const minutes = Math.floor((classTime % 3600) / 60).toString().padStart(2, '0');
-            const seconds = (classTime % 60).toString().padStart(2, '0');
-            timeDisplay.textContent = `${hours}:${minutes}:${seconds}`;
-        }
-        
-        // 暂停/继续按钮
-        pauseBtn.addEventListener('click', () => {
-            isPaused = !isPaused;
-            
-            if (isPaused) {
-                pauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-                statusBadge.innerHTML = '<i class="fas fa-circle"></i><span class="zh">课堂已暂停</span><span class="en">Class Paused</span>';
-                statusBadge.classList.remove('active');
-            } else {
-                pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-                statusBadge.innerHTML = '<i class="fas fa-circle"></i><span class="zh">课堂进行中</span><span class="en">Class in Progress</span>';
-                statusBadge.classList.add('active');
-            }
-        });
-        
-        // 停止按钮
-        stopBtn.addEventListener('click', () => {
-            if (confirm('确定要结束当前课堂吗？')) {
-                clearInterval(timerInterval);
-                showNotification('课堂已结束', 'success');
-                
-                // 模拟导航到课后页面
-                setTimeout(() => {
-                    const aiPostNav = document.querySelector('.nav-item[data-section="ai-post"]');
-                    if (aiPostNav) {
-                        aiPostNav.click();
+    }
+    
+    // 更新初始时间显示
+    updateTimeDisplay();
+    
+    // 开始按钮点击事件
+    const startBtn = document.querySelector('.class-status .control-btn:nth-child(2)');
+    if (startBtn) {
+        startBtn.addEventListener('click', function() {
+            if (!classTimeInterval) {
+                // 开始计时
+                classTimeInterval = setInterval(() => {
+                    if (!isPaused) {
+                        classTimeElapsed++;
+                        updateTimeDisplay();
                     }
-                }, 1500);
+                }, 1000);
+                
+                // 更新状态显示
+                if (statusBadge) {
+                    statusBadge.textContent = '进行中';
+                    statusBadge.className = 'status-badge active';
+                }
+                
+                showNotification('课堂计时开始', 'success');
             }
         });
-        
-        // 启动计时器
-        startTimer();
+    }
+    
+    // 暂停按钮点击事件
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', function() {
+            if (classTimeInterval) {
+                // 切换暂停状态
+                isPaused = !isPaused;
+                
+                // 更新按钮图标
+                const icon = this.querySelector('i');
+                if (isPaused) {
+                    icon.className = 'fas fa-play';
+                    
+                    // 更新状态显示
+                    if (statusBadge) {
+                        statusBadge.textContent = '已暂停';
+                        statusBadge.className = 'status-badge paused';
+                    }
+                    
+                    showNotification('课堂计时已暂停', 'warning');
+                } else {
+                    icon.className = 'fas fa-pause';
+                    
+                    // 更新状态显示
+                    if (statusBadge) {
+                        statusBadge.textContent = '进行中';
+                        statusBadge.className = 'status-badge active';
+                    }
+                    
+                    showNotification('课堂计时已恢复', 'success');
+                }
+            }
+        });
+    }
+    
+    // 停止按钮点击事件
+    if (stopBtn) {
+        stopBtn.addEventListener('click', function() {
+            if (classTimeInterval) {
+                // 确认对话框
+                if (confirm('确定要结束本节课吗？')) {
+                    // 停止计时
+                    clearInterval(classTimeInterval);
+                    classTimeInterval = null;
+                    
+                    // 重置状态
+                    isPaused = false;
+                    
+                    // 不重置时间，保留显示
+                    // 可以添加最终时间的上报逻辑
+                    
+                    // 更新状态显示
+                    if (statusBadge) {
+                        statusBadge.textContent = '已结束';
+                        statusBadge.className = 'status-badge ended';
+                    }
+                    
+                    // 更新暂停按钮图标
+                    if (pauseBtn) {
+                        const pauseIcon = pauseBtn.querySelector('i');
+                        if (pauseIcon) {
+                            pauseIcon.className = 'fas fa-pause';
+                        }
+                    }
+                    
+                    showNotification('本节课已结束，课堂时间已记录', 'info');
+                }
+            }
+        });
     }
 }
 
@@ -2623,3 +2951,227 @@ document.addEventListener('DOMContentLoaded', function() {
         initAIInClass();
     }
 });
+
+/**
+ * 添加课中章节选择器变更事件
+ * @param {HTMLElement} chapterSelect - 章节选择器元素
+ */
+function addInClassChapterSelectChangeEvent(chapterSelect) {
+    if (!chapterSelect) {
+        console.error('添加章节选择器事件：选择器元素为空');
+        return;
+    }
+    
+    // 存储事件处理函数以便可以移除
+    window._inClassChapterSelectChangeHandler = function(event) {
+        const chapterId = event.target.value;
+        if (!chapterId) return;
+        
+        console.log(`课中章节选择器变更为章节: ${chapterId}`);
+        
+        // 获取选中的章节标题
+        const selectedOption = event.target.options[event.target.selectedIndex];
+        const chapterTitle = selectedOption ? selectedOption.textContent : `章节${chapterId}`;
+        
+        // 更新课中界面内容
+        updateInClassContent(chapterId, chapterTitle);
+        
+        // 如果当前在课件展示面板，则加载PPT
+        const slidesPanel = document.querySelector('.classroom-panel:nth-child(2)');
+        if (slidesPanel && slidesPanel.classList.contains('active')) {
+            console.log('检测到章节变更，自动加载PPT...');
+            showNotification('正在加载章节PPT', 'info');
+            loadChapterSlides(chapterId);
+        }
+    };
+    
+    // 移除旧的事件处理函数（如果存在）
+    chapterSelect.removeEventListener('change', window._inClassChapterSelectChangeHandler);
+    
+    // 添加新的事件处理函数
+    chapterSelect.addEventListener('change', window._inClassChapterSelectChangeHandler);
+}
+
+/**
+ * 加载PPTist相关模块
+ * @returns {Promise} 加载完成的Promise
+ */
+function loadPPTistServices() {
+    return new Promise((resolve, reject) => {
+        console.log('开始初始化课中PPT功能...');
+        
+        // 检查当前页面中是否已存在PptLoader
+        if (window.PptLoader) {
+            console.log('检测到PptLoader已加载，直接使用');
+            
+            // 可以设置一个全局标志，表示课中部分已准备好
+            window.classroomPptEnabled = true;
+            
+            resolve(window.PptLoader);
+            return;
+        }
+        
+        // 尝试从页面中查找PptLoader相关的script标签
+        const scripts = document.querySelectorAll('script');
+        let pptLoaderPath = null;
+        
+        for (const script of scripts) {
+            const src = script.getAttribute('src') || '';
+            if (src.includes('PptLoader') || src.includes('ppt-loader')) {
+                pptLoaderPath = script.getAttribute('src');
+                console.log('从页面找到PptLoader脚本路径:', pptLoaderPath);
+                break;
+            }
+        }
+        
+        // 如果页面中没有找到，使用默认路径
+        if (!pptLoaderPath) {
+            // 根据成功加载的QuizGenerator路径推断
+            pptLoaderPath = '../src/components/courseware/PptLoader.js';
+            console.log('使用默认路径:', pptLoaderPath);
+        }
+        
+        // 加载PptLoader脚本
+        const script = document.createElement('script');
+        script.src = pptLoaderPath;
+        script.type = 'text/javascript';
+        
+        script.onload = () => {
+            console.log('PptLoader脚本加载成功，检查是否正确初始化...');
+            
+            // 给模块一点时间初始化
+            setTimeout(() => {
+                if (window.PptLoader) {
+                    console.log('PptLoader成功加载并初始化');
+                    
+                    // 设置标志
+                    window.classroomPptEnabled = true;
+                    
+                    // 修复可能缺失的属性和方法
+                    if (!window.PptLoader.loadChapterPPT) {
+                        console.warn('PptLoader缺少loadChapterPPT方法，创建替代方法');
+                        
+                        // 创建一个简单的替代方法
+                        window.PptLoader.loadChapterPPT = function(chapterId) {
+                            console.log(`尝试通过替代方法加载章节${chapterId}的PPT...`);
+                            
+                            const iframe = document.getElementById('inClassPptFrame');
+                            if (!iframe || !iframe.contentWindow) {
+                                console.error('找不到PPT iframe，无法加载PPT');
+                                return false;
+                            }
+                            
+                            // 发送简单的消息到iframe
+                            try {
+                                iframe.contentWindow.postMessage({
+                                    type: 'load-chapter',
+                                    chapterId: chapterId
+                                }, '*');
+                                console.log(`已发送章节${chapterId}加载请求到PPT iframe`);
+                                return true;
+                            } catch (error) {
+                                console.error('向PPT iframe发送消息失败:', error);
+                                return false;
+                            }
+                        };
+                    }
+                    
+                    resolve(window.PptLoader);
+                } else {
+                    console.error('PptLoader脚本加载成功但未正确初始化');
+                    reject(new Error('PptLoader加载失败'));
+                }
+            }, 500);
+        };
+        
+        script.onerror = (error) => {
+            console.error('PptLoader脚本加载失败:', error);
+            
+            // 创建一个简单的替代对象
+            console.warn('创建PptLoader替代对象');
+            window.PptLoader = {
+                loadChapterPPT: function(chapterId) {
+                    console.log(`[替代方法] 加载章节${chapterId}的PPT`);
+                    return false;
+                },
+                // 其他所需方法...
+                initialized: true
+            };
+            
+            // 即使加载失败也继续运行
+            resolve(window.PptLoader);
+        };
+        
+        // 添加到文档
+        document.head.appendChild(script);
+    });
+}
+
+/**
+ * 显示通知消息
+ * @param {string} message - 消息内容
+ * @param {string} type - 消息类型 (info, success, warning, error)
+ * @param {number} duration - 显示时间(毫秒)
+ */
+function showNotification(message, type = 'info', duration = 3000) {
+    if (!message) return;
+    
+    console.log(`显示通知[${type}]: ${message}`);
+    
+    // 创建通知元素
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    // 设置样式
+    notification.style.position = 'fixed';
+    notification.style.bottom = '20px';
+    notification.style.right = '20px';
+    notification.style.padding = '10px 15px';
+    notification.style.borderRadius = '4px';
+    notification.style.color = '#fff';
+    notification.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+    notification.style.zIndex = '9999';
+    notification.style.maxWidth = '300px';
+    notification.style.wordBreak = 'break-word';
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateY(20px)';
+    notification.style.transition = 'opacity 0.3s, transform 0.3s';
+    
+    // 设置不同类型的背景颜色
+    switch (type) {
+        case 'success':
+            notification.style.backgroundColor = '#4CAF50';
+            break;
+        case 'warning':
+            notification.style.backgroundColor = '#FF9800';
+            break;
+        case 'error':
+            notification.style.backgroundColor = '#F44336';
+            break;
+        default: // info
+            notification.style.backgroundColor = '#2196F3';
+    }
+    
+    // 添加到页面
+    document.body.appendChild(notification);
+    
+    // 显示通知
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateY(0)';
+    }, 50);
+    
+    // 设置定时器移除通知
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(20px)';
+        
+        // 过渡结束后移除元素
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, duration);
+}
