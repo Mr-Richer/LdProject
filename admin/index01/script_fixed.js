@@ -324,8 +324,25 @@ function initChapterModal() {
                 // 关闭模态框
                 closeModal();
                 
-                    // 重新加载章节列表
-                    await loadChapters();
+                    // 获取创建的章节编号
+                    let newChapterNumber = null;
+                    if (window.ChapterUpload && window.ChapterUpload.getLastCreatedChapter) {
+                        newChapterNumber = window.ChapterUpload.getLastCreatedChapter().chapter_number;
+                    } else {
+                        // 如果没有获取方法，尝试从表单获取
+                        const chapterNumberInput = modal.querySelector('input[name="chapter_number"]');
+                        if (chapterNumberInput) {
+                            newChapterNumber = chapterNumberInput.value;
+                        }
+                    }
+                
+                    // 重新加载章节列表并滚动到新创建的章节
+                    if (newChapterNumber) {
+                        await loadChaptersAndScrollToNew(newChapterNumber);
+                    } else {
+                        // 如果无法获取章节编号，回退到普通加载
+                        await loadChapters();
+                    }
                 
                 // 更新章节统计数据
                 updateChapterStats();

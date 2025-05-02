@@ -336,6 +336,16 @@ async function submitNewChapter() {
             // 创建成功
             showNotification('success', '章节创建成功', 'Chapter created successfully');
             
+            // 保存最后创建的章节信息
+            lastCreatedChapter = {
+                chapter_number: chapterData.chapter_number,
+                title_zh: chapterData.title_zh,
+                title_en: chapterData.title_en,
+                id: result.data?.id || result.data?.chapter_id || null,
+                cover_image: chapterData.cover_image,
+                ppt_file: chapterData.ppt_file
+            };
+            
             // 关闭模态框并重新加载章节列表
             document.getElementById('newChapterModal').classList.remove('active');
             form.reset();
@@ -466,11 +476,15 @@ function showNotification(type, messageZh, messageEn) {
     });
 }
 
+// 保存最后创建的章节信息
+let lastCreatedChapter = null;
+
 // 暴露公共方法和变量
 window.ChapterUpload = {
     init: initChapterUpload,
     submitNewChapter: submitNewChapter,
-    showNotification: showNotification
+    showNotification: showNotification,
+    getLastCreatedChapter: () => lastCreatedChapter  // 添加获取最后创建章节的方法
 };
 
 // 在页面加载完成后初始化
