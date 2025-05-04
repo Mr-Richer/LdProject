@@ -6,6 +6,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ChaptersModule } from './modules/chapters/chapters.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AiModule } from './modules/ai/ai.module';
+import aiConfig from './config/ai.config';
 
 @Module({
   imports: [
@@ -13,6 +15,7 @@ import { AdminModule } from './modules/admin/admin.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      load: [aiConfig], // 加载AI配置
     }),
     
     // 数据库连接
@@ -24,8 +27,8 @@ import { AdminModule } from './modules/admin/admin.module';
         host: configService.get('DB_HOST', 'localhost'),
         port: configService.get<number>('DB_PORT', 3306),
         username: configService.get('DB_USERNAME', 'root'),
-        password: configService.get('DB_PASSWORD', 'root'),
-        database: configService.get('DB_DATABASE', 'chinese_culture_course'),
+        password: configService.get('DB_PASSWORD', 'ruichen'),
+        database: configService.get('DB_DATABASE', 'db_test'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
       }),
@@ -36,6 +39,8 @@ import { AdminModule } from './modules/admin/admin.module';
     ChaptersModule,
     UploadModule,
     AdminModule,
+    AiModule,     // AI功能模块
+    HealthModule, // 健康检查模块
   ],
 })
 export class AppModule {} 

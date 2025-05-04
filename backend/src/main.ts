@@ -12,8 +12,13 @@ async function bootstrap() {
   // 设置全局前缀
   app.setGlobalPrefix(process.env.API_PREFIX || '/api');
   
-  // 启用CORS
-  app.enableCors();
+  // 配置CORS，支持所有来源，包括file://协议
+  app.enableCors({
+    origin: '*', // 允许所有来源访问
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    maxAge: 600, // 预检请求缓存时间
+  });
   
   // 配置请求体大小限制
   app.use(bodyParser.json({ limit: process.env.MAX_FILE_SIZE || '100mb' }));
@@ -29,7 +34,10 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false,
+      transformOptions: {
+        enableImplicitConversion: true
+      }
     }),
   );
   

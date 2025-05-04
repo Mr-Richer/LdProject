@@ -596,6 +596,26 @@ function initTeachingAssistant() {
     
     generateButtons.forEach(button => {
         button.addEventListener('click', function() {
+            // 检查按钮是否在小测区域内
+            const quizContainer = this.closest('.quiz-container');
+            if (quizContainer) {
+                // 如果是小测区域的生成按钮，使用小测的逻辑
+                const quizResult = document.querySelector('.quiz-result');
+                const generatedQuestionsList = document.querySelector('.generated-questions-list');
+                
+                if (quizResult) {
+                    quizResult.style.display = 'block';
+                }
+                
+                if (generatedQuestionsList) {
+                    generatedQuestionsList.style.display = 'block';
+                }
+                
+                showNotification('小测题目生成成功!', 'success');
+                return;
+            }
+            
+            // 其他区域的生成按钮使用原来的逻辑
             const assistantContainer = this.closest('.assistant-container');
             if (!assistantContainer) {
                 console.error('找不到助手容器元素 .assistant-container');

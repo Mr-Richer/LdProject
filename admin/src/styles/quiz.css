@@ -1,0 +1,29 @@
+/* 添加简答题和讨论题的样式 */
+.question-badge.short_answer {
+    background-color: #e1f5fe;
+    color: #0288d1;
+}
+
+.question-badge.discussion {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.short-answer, .discussion-points {
+    background-color: #f0f8ff;
+    border: 1px solid #d1e5f5;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.answer-title, .discussion-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #0066cc;
+}
+
+.answer-content, .discussion-content {
+    white-space: pre-wrap;
+    line-height: 1.5;
+} 
