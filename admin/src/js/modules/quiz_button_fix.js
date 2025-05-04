@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 绑定生成按钮事件
     bindGenerateButton();
     
+    // 绑定保存按钮事件
+    bindResultActionButtons();
+    
     console.log('课堂小测按钮初始化完成');
 });
 
@@ -239,6 +242,9 @@ function getGenerationParams() {
         }
     }
     
+    // 打印选中的题型，用于调试
+    console.log('选中题型:', quizType, '原始文本:', typeText);
+    
     // 获取选中的生成方式
     var activeMethod = document.querySelector('.option-btn.active');
     var method = 'ai'; // 默认智能生成
@@ -380,6 +386,9 @@ function renderQuizResult(questions) {
         return;
     }
     
+    // 显示结果容器
+    resultContainer.style.display = 'block';
+    
     // 获取题目内容容器
     var resultContent = resultContainer.querySelector('.result-content');
     if (!resultContent) {
@@ -400,6 +409,9 @@ function renderQuizResult(questions) {
     
     // 滚动到结果区域
     resultContainer.scrollIntoView({behavior: 'smooth'});
+    
+    // 重新绑定结果操作按钮事件
+    bindResultActionButtons();
 }
 
 /**
@@ -407,6 +419,24 @@ function renderQuizResult(questions) {
  */
 function renderQuestionToExistingStructure(question, index, container) {
     if (!question || !container) return;
+    
+    // 检查并修正题目类型
+    if (!question.type || !['single', 'multiple', 'short_answer', 'discussion'].includes(question.type)) {
+        // 尝试根据问题特征推断类型
+        if (question.options && question.options.length > 0) {
+            if (Array.isArray(question.correctAnswer)) {
+                question.type = 'multiple';
+            } else {
+                question.type = 'single';
+            }
+        } else if (question.discussionPoints) {
+            question.type = 'discussion';
+        } else {
+            question.type = 'short_answer';
+        }
+        
+        console.log('修正题目类型:', question.type, '对于题目:', question.questionText);
+    }
     
     // 创建题目容器
     var questionDiv = document.createElement('div');
@@ -478,7 +508,7 @@ function renderQuestionToExistingStructure(question, index, container) {
                     <span class="zh">讨论方向：</span>
                     <span class="en">Discussion Direction: </span>
                 </div>
-                <div class="answer-content">${question.discussionPoints || '无讨论方向'}</div>
+                <div class="answer-content">${question.discussionPoints || question.correctAnswer || '无讨论方向'}</div>
             </div>
         `;
     }
@@ -521,11 +551,17 @@ function updateQuestionTable(questions) {
     questions.forEach(function(question, index) {
         var row = document.createElement('tr');
         
+        // 确保题目类型有效
+        var type = question.type || 'single';
+        if (!['single', 'multiple', 'short_answer', 'discussion'].includes(type)) {
+            type = 'single';
+        }
+        
         var typeClass = '';
         var typeTextZh = '';
         var typeTextEn = '';
         
-        switch(question.type) {
+        switch(type) {
             case 'single':
                 typeClass = 'single';
                 typeTextZh = '单选题';
@@ -743,4 +779,276 @@ function addResultStyles() {
     
     // 添加到文档头部
     document.head.appendChild(styleEl);
+}
+
+/**
+ * 绑定结果操作按钮事件（编辑、保存、重新生成等）
+ */
+function bindResultActionButtons() {
+    var resultActionBtns = document.querySelectorAll('.result-action-btn');
+    
+    if (resultActionBtns.length === 0) {
+        console.log('未找到结果操作按钮');
+        return;
+    }
+    
+    console.log('找到结果操作按钮数量:', resultActionBtns.length);
+    
+    // 遍历所有按钮
+    resultActionBtns.forEach(function(btn) {
+        // 移除旧的事件监听器，防止重复绑定
+        btn.removeEventListener('click', handleResultButtonClick);
+        
+        // 添加新的事件监听器
+        btn.addEventListener('click', handleResultButtonClick);
+    });
+}
+
+/**
+ * 处理结果操作按钮点击事件
+ */
+function handleResultButtonClick(event) {
+    // 阻止默认行为和冒泡
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // 获取按钮内容以确定按钮类型
+    var buttonContent = this.innerHTML.toLowerCase();
+    
+    console.log('点击结果操作按钮:', buttonContent);
+    
+    // 根据按钮类型执行不同操作
+    if (buttonContent.includes('fa-save') || buttonContent.includes('保存')) {
+        console.log('点击了保存按钮');
+        
+        // 获取当前生成的题目
+        var questions = window.allQuestions;
+        if (!questions || questions.length === 0) {
+            if (window.showNotification) {
+                window.showNotification('没有题目可保存', 'error');
+            }
+            return false;
+        }
+        
+        // 获取当前选择的章节ID
+        var chapterSelect = document.querySelector('select[name="chapterId"]') || document.getElementById('chapterId');
+        var chapterId = 1; // 默认ID
+        
+        if (chapterSelect && chapterSelect.value) {
+            chapterId = parseInt(chapterSelect.value);
+        }
+        
+        console.log('使用章节ID:', chapterId);
+        
+        // 正确格式化题目数据以适应后端要求
+        var formattedQuestions = questions.map(function(q, index) {
+            // 确保question字段有值
+            var questionText = q.questionText || q.question || '未定义题目';
+            
+            // 选项处理 - 确保是字符串格式
+            var options = '';
+            if (q.options) {
+                if (typeof q.options === 'string') {
+                    options = q.options;
+                } else if (Array.isArray(q.options)) {
+                    options = JSON.stringify(q.options);
+                }
+            }
+            
+            // 答案处理 - 确保是字符串格式
+            var answer = '';
+            if (q.correctAnswer) {
+                if (typeof q.correctAnswer === 'string') {
+                    answer = q.correctAnswer;
+                } else if (Array.isArray(q.correctAnswer)) {
+                    answer = JSON.stringify(q.correctAnswer);
+                }
+            } else {
+                answer = 'A'; // 默认答案
+            }
+            
+            // 题型映射 - 将前端题型映射到数据库支持的枚举值
+            var mappedType = 'choice'; // 默认为choice
+            
+            if (q.type) {
+                switch (q.type.toLowerCase()) {
+                    case 'single':
+                        mappedType = 'single';
+                        break;
+                    case 'multiple':
+                        mappedType = 'multiple';
+                        break;
+                    case 'short_answer':
+                        mappedType = 'short';
+                        break;
+                    case 'discussion':
+                        mappedType = 'discussion';
+                        break;
+                }
+            } else {
+                // 尝试根据题目特征推断类型
+                if (Array.isArray(q.correctAnswer) && q.correctAnswer.length > 1) {
+                    mappedType = 'multiple'; 
+                } else if (q.options && Array.isArray(q.options) && q.options.length > 0) {
+                    mappedType = 'single';
+                } else if (q.discussionPoints) {
+                    mappedType = 'discussion';
+                } else if (!q.options || q.options.length === 0) {
+                    mappedType = 'short';
+                }
+            }
+            
+            console.log(`题目#${index+1} 类型: ${q.type || '未指定'} -> 映射为: ${mappedType}`);
+            
+            // 创建题目对象，确保所有必要字段都存在
+            return {
+                type: mappedType,
+                question: questionText,
+                options: options,
+                answer: answer,
+                explanation: q.explanation || '',
+                difficulty: q.difficulty || 'medium',
+                order: index + 1
+            };
+        });
+        
+        // 输出完整题目数据用于调试
+        console.log('格式化后的题目数据:', formattedQuestions);
+        
+        // 直接保存题目
+        saveQuizQuestions(formattedQuestions, 1, chapterId);
+    } 
+    else if (buttonContent.includes('fa-edit') || buttonContent.includes('编辑')) {
+        console.log('点击了编辑按钮');
+        // 编辑功能实现
+        if (window.showNotification) {
+            window.showNotification('编辑功能尚未实现', 'info');
+        }
+    } 
+    else if (buttonContent.includes('fa-redo') || buttonContent.includes('重新生成')) {
+        console.log('点击了重新生成按钮');
+        // 重新触发生成按钮点击
+        var generateBtn = document.querySelector('.generate-btn');
+        if (generateBtn) {
+            generateBtn.click();
+        } else {
+            if (window.showNotification) {
+                window.showNotification('未找到生成按钮', 'error');
+            }
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * 保存题目到数据库的API调用
+ */
+function saveQuizQuestions(questions, quizId, chapterId) {
+    // 显示网络请求状态
+    console.log('正在发送保存请求到:', baseUrl + '/quiz/save-questions');
+    
+    // 显示保存中提示
+    if (window.showNotification) {
+        window.showNotification('正在保存题目...', 'info');
+    }
+    
+    // 创建正确格式的请求数据，完全符合后端SaveQuizQuestionsDto的结构
+    var requestData = {
+        questions: questions,
+        quizId: quizId || 1,
+        chapterId: chapterId || 1
+    };
+    
+    // 详细记录请求数据结构
+    console.log('请求数据结构:', JSON.stringify(requestData, null, 2));
+    console.log('题目类型统计:');
+    var typeCount = {};
+    questions.forEach(function(q) {
+        typeCount[q.type] = (typeCount[q.type] || 0) + 1;
+    });
+    console.log(typeCount);
+    
+    // 检查必填字段
+    var missingFields = [];
+    questions.forEach(function(q, idx) {
+        if (!q.question) missingFields.push(`题目#${idx+1}缺少问题内容`);
+        if (!q.type) missingFields.push(`题目#${idx+1}缺少类型`);
+    });
+    
+    if (missingFields.length > 0) {
+        console.error('请求数据缺少必填字段:', missingFields);
+        if (window.showNotification) {
+            window.showNotification('数据不完整: ' + missingFields.join(', '), 'error');
+        }
+        return;
+    }
+    
+    // 发送请求
+    fetch(baseUrl + '/quiz/save-questions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(function(response) {
+        console.log('收到服务器响应:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            // 详细记录错误响应
+            return response.text().then(text => {
+                let errorMsg = '保存失败: ' + response.status + ' ' + response.statusText;
+                console.log('错误响应内容:', text);
+                
+                try {
+                    // 尝试解析错误响应为JSON
+                    const errorJson = JSON.parse(text);
+                    console.log('解析的错误JSON:', errorJson);
+                    if (errorJson.message) {
+                        errorMsg += ' - ' + errorJson.message;
+                    }
+                } catch (e) {
+                    // 如果不是JSON，直接使用文本
+                    console.log('不是有效的JSON响应');
+                    if (text) {
+                        errorMsg += ' - ' + text;
+                    }
+                }
+                
+                console.error('API错误详情:', errorMsg);
+                throw new Error(errorMsg);
+            });
+        }
+        
+        return response.json();
+    })
+    .then(function(data) {
+        console.log('成功解析响应数据:', data);
+        
+        if (window.showNotification) {
+            var successMsg = '题目保存成功!';
+            if (data && data.data && data.data.savedCount) {
+                successMsg += ` 共保存了${data.data.savedCount}道题目`;
+            }
+            window.showNotification(successMsg, 'success');
+        }
+    })
+    .catch(function(error) {
+        console.error('请求错误详细信息:', error);
+        
+        // 显示一个更详细的错误提示
+        var errorMsg = '题目保存失败: ' + error.message;
+        
+        // 如果是后端错误，尝试提供更有用的提示
+        if (error.message.includes('Internal server error')) {
+            errorMsg += '\n\n可能的原因:\n1. 数据格式不符合要求\n2. 数据库连接问题\n3. 服务器内部错误';
+            console.log('建议检查后端日志获取更多信息');
+        }
+        
+        if (window.showNotification) {
+            window.showNotification(errorMsg, 'error');
+        }
+    });
 }

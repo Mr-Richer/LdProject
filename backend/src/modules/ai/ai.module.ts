@@ -4,11 +4,13 @@ import { AiService } from './ai.service';
 import { QuizController } from './quiz.controller';
 import { ChaptersModule } from '../chapters/chapters.module';
 import { PptController } from './ppt.controller';
+import { QuizModule } from '../quiz/quiz.module';
 
 @Module({
   imports: [
     ConfigModule,
-    ChaptersModule
+    ChaptersModule,
+    QuizModule
   ],
   providers: [AiService],
   controllers: [QuizController, PptController],

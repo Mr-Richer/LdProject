@@ -1,10 +1,11 @@
-import { Body, Controller, HttpStatus, Post, Get, Logger, BadRequestException } from '@nestjs/common';
+import { Body, Controller, HttpStatus, Post, Get, Logger, BadRequestException, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { QuizRequestDto, QuestionType } from './dto/quiz-request.dto';
 import { ChaptersService } from '../chapters/chapters.service';
 import { QuizPromptRequestDto, QuizType } from './dto/quiz-prompt-request.dto';
 import { QuizResponseDto } from './dto/quiz-response.dto';
+import { QuizService } from '../quiz/quiz.service';
 
 @ApiTags('AI测验')
 @Controller('ai/quiz')
@@ -14,6 +15,7 @@ export class QuizController {
   constructor(
     private readonly aiService: AiService,
     private readonly chaptersService: ChaptersService,
+    private readonly quizService: QuizService,
   ) {}
 
   // 简单的测试端点，用于确认路由系统是否正常
@@ -225,6 +227,59 @@ export class QuizController {
       }
       
       throw new BadRequestException(`生成题目失败: ${error.message}`);
+    }
+  }
+
+  @Post('generate-and-save')
+  @ApiOperation({ summary: '生成测验题目并保存到数据库' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功生成并保存测验题目' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '请求参数无效' })
+  async generateAndSaveQuiz(
+    @Body() requestDto: QuizPromptRequestDto & { quizId: number, chapterId: number }
+  ): Promise<QuizResponseDto> {
+    this.logger.log(`收到生成并保存题目请求: ${JSON.stringify(requestDto)}`);
+    
+    // 首先生成题目
+    const generateResponse = await this.generateQuizByPrompt(requestDto);
+    
+    if (generateResponse.code !== HttpStatus.OK || !generateResponse.data.questions) {
+      throw new BadRequestException('生成题目失败');
+    }
+    
+    // 然后保存到数据库
+    try {
+      const savedQuestions = await this.quizService.saveQuizQuestions(
+        generateResponse.data.questions,
+        requestDto.quizId,
+        requestDto.chapterId
+      );
+      
+      this.logger.log(`成功保存${savedQuestions.length}道题目到数据库`);
+      
+      // 在返回结果中包含保存状态
+      return {
+        code: HttpStatus.OK,
+        data: {
+          questions: generateResponse.data.questions,
+          savedToDatabase: true,
+          savedCount: savedQuestions.length
+        },
+        message: '题目生成并保存成功'
+      };
+    } catch (error) {
+      this.logger.error(`保存题目失败: ${error.message}`);
+      
+      // 返回生成成功但保存失败的结果
+      return {
+        code: HttpStatus.OK,
+        data: {
+          questions: generateResponse.data.questions,
+          savedToDatabase: false,
+          savedCount: 0,
+          error: error.message
+        },
+        message: '题目生成成功，但保存失败'
+      };
     }
   }
 } 

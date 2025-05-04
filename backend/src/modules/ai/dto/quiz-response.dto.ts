@@ -86,21 +86,35 @@ export class TrueFalseQuestionDto {
 export type QuizQuestionDto = SingleChoiceQuestionDto | MultipleChoiceQuestionDto | TrueFalseQuestionDto;
 
 /**
- * 用于定义data属性的内部类
+ * 课堂小测响应数据DTO
  */
 export class QuizResponseDataDto {
   @ApiProperty({ 
-    description: '题目列表', 
-    type: 'array', 
-    items: { 
-      oneOf: [
-        { $ref: '#/components/schemas/SingleChoiceQuestionDto' },
-        { $ref: '#/components/schemas/MultipleChoiceQuestionDto' },
-        { $ref: '#/components/schemas/TrueFalseQuestionDto' }
-      ] 
-    }
+    description: '题目列表',
+    type: [Object]
   })
-  questions: QuizQuestionDto[];
+  questions: any[];
+
+  @ApiProperty({
+    description: '是否已保存到数据库',
+    required: false,
+    type: Boolean
+  })
+  savedToDatabase?: boolean;
+
+  @ApiProperty({
+    description: '保存到数据库的题目数量',
+    required: false,
+    type: Number
+  })
+  savedCount?: number;
+
+  @ApiProperty({
+    description: '保存失败时的错误信息',
+    required: false,
+    type: String
+  })
+  error?: string;
 }
 
 /**
