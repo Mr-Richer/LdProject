@@ -12,12 +12,11 @@ async function bootstrap() {
   // 设置全局前缀
   app.setGlobalPrefix(process.env.API_PREFIX || '/api');
   
-  // 配置CORS，支持所有来源，包括file://协议
+  // 配置CORS，允许前端访问
   app.enableCors({
-    origin: '*', // 允许所有来源访问
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    maxAge: 600, // 预检请求缓存时间
+    origin: '*',  // 在生产环境中应该限制为特定域名
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
   });
   
   // 配置请求体大小限制
@@ -29,15 +28,17 @@ async function bootstrap() {
     prefix: '/uploads',
   });
   
-  // 全局验证管道
+  // 全局验证管道 - 修改配置允许任何属性
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,
       transform: true,
-      forbidNonWhitelisted: false,
-      transformOptions: {
-        enableImplicitConversion: true
-      }
+      whitelist: false, // 不使用白名单检查，允许任何属性存在
+      forbidNonWhitelisted: false, // 不禁止未知属性
+      forbidUnknownValues: false, // 不禁止未知值
+      validationError: {
+        target: false, // 不在错误中包含目标对象
+        value: false, // 不在错误中包含值 
+      },
     }),
   );
   

@@ -279,7 +279,7 @@ function getGenerationParams() {
         quizType: quizType,
         generationMethod: method,
         count: parseInt(count, 10), // 确保是数字类型
-        difficulty: 'medium' // 默认中等难度
+        difficulty: 'medium', // 默认中等难度
     };
 }
 
@@ -290,6 +290,23 @@ function generateQuizQuestions(params) {
     return new Promise(function(resolve, reject) {
         // 显示网络请求状态
         console.log('正在发送请求到:', baseUrl + '/ai/quiz/generate-by-prompt');
+        
+        // 从参数中移除chapterId，保存到生成成功后使用
+        var chapterId = 1;
+        if (params.chapterId) {
+            chapterId = params.chapterId;
+            delete params.chapterId; // 从请求中删除，因为API不接受此字段
+        }
+        
+        // 将章节ID保存到window对象，供保存时使用
+        window.lastChapterId = chapterId;
+        
+        // 确保参数类型正确
+        if (params.count && typeof params.count !== 'number') {
+            params.count = parseInt(params.count, 10) || 5;
+        }
+        
+        console.log('发送最终参数:', params);
         
         fetch(baseUrl + '/ai/quiz/generate-by-prompt', {
             method: 'POST',
@@ -333,22 +350,8 @@ function generateQuizQuestions(params) {
         .catch(function(error) {
             console.error('请求错误详细信息:', error);
             
-            // 检查是否为CORS错误
-            if (error.message.includes('NetworkError') || 
-                error.message.includes('Failed to fetch') || 
-                error.message.includes('CORS')) {
-                
-                const corsError = new Error(`跨域请求失败: 请确保服务器已启动并配置了正确的CORS策略。
-                当前API地址: ${baseUrl}/ai/quiz/generate-by-prompt
-                尝试以下解决方案:
-                1. 确保后端服务器正在运行
-                2. 检查服务器CORS配置是否允许当前域名
-                3. 尝试通过相同域名访问页面和API`);
-                
-                reject(corsError);
-            } else {
-                reject(error);
-            }
+            // 直接拒绝并传递错误
+            reject(error);
         });
     });
 }
@@ -832,7 +835,7 @@ function handleResultButtonClick(event) {
         
         // 获取当前选择的章节ID
         var chapterSelect = document.querySelector('select[name="chapterId"]') || document.getElementById('chapterId');
-        var chapterId = 1; // 默认ID
+        var chapterId = window.lastChapterId || 1; // 使用生成时记录的章节ID
         
         if (chapterSelect && chapterSelect.value) {
             chapterId = parseInt(chapterSelect.value);
@@ -953,36 +956,15 @@ function saveQuizQuestions(questions, quizId, chapterId) {
         window.showNotification('正在保存题目...', 'info');
     }
     
-    // 创建正确格式的请求数据，完全符合后端SaveQuizQuestionsDto的结构
-    var requestData = {
-        questions: questions,
-        quizId: quizId || 1,
-        chapterId: chapterId || 1
+    // 创建请求数据 - 使用格式化后的题目数据
+    const requestData = {
+        questions: questions, // 使用完整的格式化后题目数据
+        quizId: parseInt(quizId) || 1,
+        chapterId: parseInt(chapterId) || 1
     };
     
-    // 详细记录请求数据结构
-    console.log('请求数据结构:', JSON.stringify(requestData, null, 2));
-    console.log('题目类型统计:');
-    var typeCount = {};
-    questions.forEach(function(q) {
-        typeCount[q.type] = (typeCount[q.type] || 0) + 1;
-    });
-    console.log(typeCount);
-    
-    // 检查必填字段
-    var missingFields = [];
-    questions.forEach(function(q, idx) {
-        if (!q.question) missingFields.push(`题目#${idx+1}缺少问题内容`);
-        if (!q.type) missingFields.push(`题目#${idx+1}缺少类型`);
-    });
-    
-    if (missingFields.length > 0) {
-        console.error('请求数据缺少必填字段:', missingFields);
-        if (window.showNotification) {
-            window.showNotification('数据不完整: ' + missingFields.join(', '), 'error');
-        }
-        return;
-    }
+    console.log('发送题目数据:', JSON.stringify(requestData, null, 2));
+    console.log('题目数量:', questions.length);
     
     // 发送请求
     fetch(baseUrl + '/quiz/save-questions', {
@@ -1038,14 +1020,8 @@ function saveQuizQuestions(questions, quizId, chapterId) {
     .catch(function(error) {
         console.error('请求错误详细信息:', error);
         
-        // 显示一个更详细的错误提示
+        // 显示错误提示
         var errorMsg = '题目保存失败: ' + error.message;
-        
-        // 如果是后端错误，尝试提供更有用的提示
-        if (error.message.includes('Internal server error')) {
-            errorMsg += '\n\n可能的原因:\n1. 数据格式不符合要求\n2. 数据库连接问题\n3. 服务器内部错误';
-            console.log('建议检查后端日志获取更多信息');
-        }
         
         if (window.showNotification) {
             window.showNotification(errorMsg, 'error');
