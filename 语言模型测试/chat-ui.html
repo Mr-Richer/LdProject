@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepSeek语言模型聊天界面</title>
+    <title>语言模型聊天界面</title>
     <style>
         :root {
             --primary-color: #4a6bdf;
@@ -15,6 +15,7 @@
             --success-color: #10b981;
             --warning-color: #f59e0b;
             --error-color: #ef4444;
+            --info-color: #3b82f6;
         }
         
         * {
@@ -53,10 +54,15 @@
         }
         
         .model-selector {
-            margin-bottom: 20px;
+            margin: 15px 0;
+        }
+        
+        .model-options {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
             gap: 15px;
+            margin-bottom: 10px;
         }
         
         .model-option {
@@ -71,6 +77,85 @@
         
         .model-option label {
             font-weight: 500;
+        }
+        
+        .custom-api-form {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: white;
+            display: none;
+        }
+        
+        .form-row {
+            margin-bottom: 12px;
+        }
+        
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-row input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .chat-settings {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .stream-toggle-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .stream-toggle-container label {
+            margin-left: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .action-button {
+            background-color: var(--secondary-color);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .action-button:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .stop-button {
+            background-color: var(--warning-color);
+            color: white;
+            display: none;
+        }
+        
+        .stop-button:hover {
+            background-color: #e69909;
         }
         
         .chat-container {
@@ -200,20 +285,20 @@
         
         .typing-indicator span:nth-child(3) {
             animation-delay: 0.4s;
-            margin-right: 0;
         }
         
         @keyframes typing {
-            0%, 100% { transform: translateY(0); }
+            0% { transform: translateY(0); }
             50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
         }
         
         .status-message {
-            text-align: center;
-            padding: 8px;
-            margin: 10px 0;
+            padding: 8px 12px;
+            margin-bottom: 10px;
             border-radius: 4px;
             font-size: 0.9rem;
+            text-align: center;
         }
         
         .status-message.error {
@@ -221,105 +306,44 @@
             color: var(--error-color);
         }
         
-        .status-message.success {
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success-color);
+        .status-message.info {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--info-color);
         }
         
-        .stream-toggle {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            justify-content: flex-end;
+        code {
+            font-family: monospace;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 0.9em;
         }
         
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 40px;
-            height: 20px;
-            margin-right: 8px;
+        pre {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
         }
         
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 20px;
-        }
-        
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .toggle-slider {
-            background-color: var(--primary-color);
-        }
-        
-        input:checked + .toggle-slider:before {
-            transform: translateX(20px);
-        }
-        
-        .toggle-label {
-            font-size: 0.9rem;
-            color: var(--light-text);
-        }
-        
-        .control-panel {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .clear-button {
+        pre code {
             background-color: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--light-text);
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
+            padding: 0;
         }
         
-        .clear-button:hover {
-            background-color: var(--secondary-color);
-            color: var(--text-color);
-        }
-        
-        /* 响应式设计 */
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
                 height: 100vh;
             }
             
-            .message {
-                max-width: 90%;
-            }
-            
             h1 {
                 font-size: 1.5rem;
+            }
+            
+            .message {
+                max-width: 90%;
             }
         }
     </style>
@@ -327,74 +351,89 @@
 <body>
     <div class="container">
         <header>
-            <h1>DeepSeek语言模型聊天界面</h1>
-            <p>选择聊天模型并开始对话</p>
-        </header>
-        
-        <div class="model-selector">
-            <div class="model-option">
-                <input type="radio" id="openrouter" name="model" value="openrouter" checked>
-                <label for="openrouter">OpenRouter (deepseek-chat-v3-0324)</label>
-            </div>
-            <div class="model-option">
-                <input type="radio" id="chutes" name="model" value="chutes">
-                <label for="chutes">Chutes (DeepSeek-V3-0324)</label>
-            </div>
-        </div>
-        
-        <div class="control-panel">
-            <button class="clear-button" onclick="chatApp.clearChat()">清空对话</button>
-            
-            <div class="stream-toggle">
-                <label class="toggle-switch">
-                    <input type="checkbox" id="stream-toggle">
-                    <span class="toggle-slider"></span>
-                </label>
-                <span class="toggle-label">逐字显示回复</span>
-            </div>
-        </div>
-        
-        <div class="chat-container">
-            <div class="messages" id="messages">
-                <div class="message bot-message">
-                    您好，我是基于DeepSeek的AI助手。请问有什么我可以帮助您的？
-                    <div class="message-time">
-                        今天 12:00
+            <h1>中文语言模型聊天测试</h1>
+            <div class="model-selector">
+                <div class="model-options">
+                    <div class="model-option">
+                        <input type="radio" id="openrouter" name="model" value="openrouter" checked>
+                        <label for="openrouter">DeepSeek (OpenRouter)</label>
+                    </div>
+                    <div class="model-option">
+                        <input type="radio" id="chutes" name="model" value="chutes">
+                        <label for="chutes">DeepSeek (Chutes)</label>
+                    </div>
+                    <div class="model-option">
+                        <input type="radio" id="claude" name="model" value="claude">
+                        <label for="claude">Claude</label>
+                    </div>
+                    <div class="model-option">
+                        <input type="radio" id="gemini" name="model" value="gemini">
+                        <label for="gemini">Gemini</label>
+                    </div>
+                    <div class="model-option">
+                        <input type="radio" id="custom" name="model" value="custom">
+                        <label for="custom">自定义API</label>
+                    </div>
+                </div>
+                
+                <div id="custom-api-form" class="custom-api-form">
+                    <div class="form-row">
+                        <label for="custom-api-url">API URL</label>
+                        <input type="text" id="custom-api-url" placeholder="例如: https://api.example.com/v1/chat">
+                    </div>
+                    <div class="form-row">
+                        <label for="custom-model-id">模型ID</label>
+                        <input type="text" id="custom-model-id" placeholder="例如: model-name">
+                    </div>
+                    <div class="form-row">
+                        <label for="custom-api-key">API密钥</label>
+                        <input type="password" id="custom-api-key" placeholder="您的API密钥">
+                    </div>
+                </div>
+                
+                <div class="chat-settings">
+                    <div class="stream-toggle-container">
+                        <input type="checkbox" id="stream-toggle" checked>
+                        <label for="stream-toggle">流式响应</label>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="clear-chat-btn" class="action-button">
+                            <i class="fas fa-trash-alt"></i> 清空对话
+                        </button>
+                        <button id="stop-generation-btn" class="action-button stop-button">
+                            <i class="fas fa-stop"></i> 停止生成
+                        </button>
                     </div>
                 </div>
             </div>
-            
-            <div class="typing-indicator" id="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+        </header>
+        
+        <div class="chat-container">
+            <div id="messages" class="messages">
+                <div class="message bot-message">
+                    你好，我是DeepSeek中文语言模型，可以帮你回答问题、提供信息或进行对话。
+                    <div class="message-time">今天 12:00</div>
+                </div>
+                <div id="typing-indicator" class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
             </div>
             
             <div class="input-area">
-                <textarea 
-                    class="message-input" 
-                    id="message-input" 
-                    placeholder="输入您的消息..."
-                    rows="1"
-                    onkeydown="chatApp.handleKeyDown(event)"
-                ></textarea>
-                <button class="send-button" id="send-button" onclick="chatApp.sendMessage()">发送</button>
+                <textarea id="message-input" class="message-input" placeholder="请输入您的问题..." onkeydown="ChatApp.handleKeyDown(event)"></textarea>
+                <button id="send-button" class="send-button" onclick="ChatApp.send()">发送</button>
             </div>
         </div>
     </div>
-
-    <!-- 引入外部JS文件 -->
+    
     <script src="chat.js"></script>
     <script>
-        // 初始化聊天界面
+        // 初始化聊天应用
         document.addEventListener('DOMContentLoaded', function() {
-            chatApp.init();
-            
-            // 添加系统提示到历史记录
-            window.chatHistory = [{
-                role: 'system',
-                content: '你是一个有帮助的助手，基于DeepSeek大型语言模型。你能够提供信息、回答问题和进行对话。'
-            }];
+            ChatApp.init();
         });
     </script>
 </body>

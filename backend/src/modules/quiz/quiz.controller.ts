@@ -1,8 +1,9 @@
-import { Body, Controller, Post, Logger, HttpStatus, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Post, Logger, HttpStatus, BadRequestException, Get, Param, Query, Delete, Patch } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { IsArray, IsNumber, IsNotEmpty, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Question } from './entities/question.entity';
 
 // 题目DTO - 允许空对象
 class QuestionDto {
@@ -45,12 +46,46 @@ class SaveQuizQuestionsResponseDto {
   };
 }
 
-@ApiTags('测验题目')
-@Controller('quiz')
+@ApiTags('题目管理')
+@Controller('ai/quiz')
 export class QuizController {
   private readonly logger = new Logger(QuizController.name);
 
   constructor(private readonly quizService: QuizService) {}
+
+  @Get('questions')
+  @ApiOperation({ summary: '获取所有题目' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功获取题目列表' })
+  async getAllQuestions() {
+    try {
+      const questions = await this.quizService.findAll();
+      return {
+        code: 200,
+        data: questions,
+        message: '获取题目列表成功'
+      };
+    } catch (error) {
+      this.logger.error(`获取题目列表失败: ${error.message}`);
+      throw new BadRequestException('获取题目列表失败');
+    }
+  }
+
+  @Get('questions/chapter/:chapterId')
+  @ApiOperation({ summary: '获取指定章节的题目' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功获取章节题目' })
+  async getQuestionsByChapter(@Param('chapterId') chapterId: string) {
+    try {
+      const questions = await this.quizService.findByChapter(parseInt(chapterId));
+      return {
+        code: 200,
+        data: questions,
+        message: '获取章节题目成功'
+      };
+    } catch (error) {
+      this.logger.error(`获取章节题目失败: ${error.message}`);
+      throw new BadRequestException('获取章节题目失败');
+    }
+  }
 
   @Post('save-questions')
   @ApiOperation({ summary: '保存测验题目到数据库' })
@@ -115,6 +150,102 @@ export class QuizController {
       this.logger.debug(`错误堆栈: ${error.stack}`);
       
       throw new BadRequestException(`保存题目失败: ${error.message}`);
+    }
+  }
+
+  @Delete('questions/:id')
+  @ApiOperation({ summary: '硬删除题目' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功删除题目' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '题目不存在' })
+  async deleteQuestion(@Param('id') id: string) {
+    try {
+      this.logger.log(`接收到硬删除题目请求: ID=${id}`);
+      const deleteResult = await this.quizService.deleteQuestion(parseInt(id));
+      
+      return {
+        code: HttpStatus.OK,
+        message: '题目删除成功',
+        data: deleteResult
+      };
+    } catch (error) {
+      this.logger.error(`删除题目失败: ${error.message}`);
+      throw new BadRequestException(`删除题目失败: ${error.message}`);
+    }
+  }
+
+  @Patch('questions/:id')
+  @ApiOperation({ summary: '软删除题目(标记删除)' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功标记删除题目' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '题目不存在' })
+  async softDeleteQuestion(@Param('id') id: string, @Body() updateData: any) {
+    try {
+      this.logger.log(`接收到软删除题目请求: ID=${id}, isDeleted=${updateData.isDeleted}`);
+      const updateResult = await this.quizService.softDeleteQuestion(parseInt(id), updateData.isDeleted);
+      
+      return {
+        code: HttpStatus.OK,
+        message: '题目标记删除成功',
+        data: updateResult
+      };
+    } catch (error) {
+      this.logger.error(`标记删除题目失败: ${error.message}`);
+      throw new BadRequestException(`标记删除题目失败: ${error.message}`);
+    }
+  }
+
+  @Patch('questions/:id/soft-delete')
+  @ApiOperation({ summary: '软删除题目(专用端点)' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功标记删除题目' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '题目不存在' })
+  async softDeleteQuestionEndpoint(@Param('id') id: string) {
+    try {
+      this.logger.log(`接收到软删除题目请求(专用端点): ID=${id}`);
+      const updateResult = await this.quizService.softDeleteQuestion(parseInt(id), 1);
+      
+      return {
+        code: HttpStatus.OK,
+        message: '题目标记删除成功',
+        data: updateResult
+      };
+    } catch (error) {
+      this.logger.error(`标记删除题目失败: ${error.message}`);
+      throw new BadRequestException(`标记删除题目失败: ${error.message}`);
+    }
+  }
+
+  @Get('questions/all-with-deleted')
+  @ApiOperation({ summary: '获取所有题目(包括已软删除)' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功获取所有题目(包括已软删除)' })
+  async getAllQuestionsIncludeDeleted() {
+    try {
+      this.logger.log('获取所有题目(包括已软删除)');
+      const questions = await this.quizService.findAllIncludeDeleted();
+      return {
+        code: 200,
+        data: questions,
+        message: '获取所有题目(包括已软删除)成功'
+      };
+    } catch (error) {
+      this.logger.error(`获取所有题目(包括已软删除)失败: ${error.message}`);
+      throw new BadRequestException('获取所有题目(包括已软删除)失败');
+    }
+  }
+
+  @Get('questions/chapter/:chapterId/all-with-deleted')
+  @ApiOperation({ summary: '获取指定章节的所有题目(包括已软删除)' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功获取章节所有题目(包括已软删除)' })
+  async getChapterQuestionsIncludeDeleted(@Param('chapterId') chapterId: string) {
+    try {
+      this.logger.log(`获取章节${chapterId}的所有题目(包括已软删除)`);
+      const questions = await this.quizService.findByChapterIncludeDeleted(parseInt(chapterId));
+      return {
+        code: 200,
+        data: questions,
+        message: `获取章节${chapterId}的所有题目(包括已软删除)成功`
+      };
+    } catch (error) {
+      this.logger.error(`获取章节所有题目(包括已软删除)失败: ${error.message}`);
+      throw new BadRequestException('获取章节所有题目(包括已软删除)失败');
     }
   }
 } 

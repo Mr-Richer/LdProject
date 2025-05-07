@@ -274,12 +274,22 @@ function getGenerationParams() {
         prompt = promptInput.value.trim();
     }
     
+    // 获取章节ID
+    var chapterSelect = document.querySelector('select[name="chapterId"]') || document.getElementById('chapterId') || document.getElementById('chapter-select');
+    var chapterId = 1; // 默认章节ID
+    
+    if (chapterSelect && chapterSelect.value) {
+        chapterId = parseInt(chapterSelect.value);
+        console.log('生成参数 - 选择的章节ID:', chapterId);
+    }
+    
     return {
         prompt: prompt,
         quizType: quizType,
         generationMethod: method,
         count: parseInt(count, 10), // 确保是数字类型
         difficulty: 'medium', // 默认中等难度
+        chapterId: chapterId // 添加章节ID
     };
 }
 
@@ -291,11 +301,18 @@ function generateQuizQuestions(params) {
         // 显示网络请求状态
         console.log('正在发送请求到:', baseUrl + '/ai/quiz/generate-by-prompt');
         
-        // 从参数中移除chapterId，保存到生成成功后使用
+        // 从参数中提取chapterId，保存到生成成功后使用
         var chapterId = 1;
         if (params.chapterId) {
             chapterId = params.chapterId;
-            delete params.chapterId; // 从请求中删除，因为API不接受此字段
+            // 检查API是否支持chapterId参数
+            const apiSupportsChapterId = true; // 设置为true表示API支持此参数
+            
+            if (!apiSupportsChapterId) {
+                delete params.chapterId; // 只有在API不支持时才删除
+            }
+            
+            console.log('使用章节ID:', chapterId, '是否包含在请求中:', apiSupportsChapterId);
         }
         
         // 将章节ID保存到window对象，供保存时使用
@@ -834,11 +851,14 @@ function handleResultButtonClick(event) {
         }
         
         // 获取当前选择的章节ID
-        var chapterSelect = document.querySelector('select[name="chapterId"]') || document.getElementById('chapterId');
+        var chapterSelect = document.querySelector('select[name="chapterId"]') || document.getElementById('chapterId') || document.getElementById('chapter-select');
         var chapterId = window.lastChapterId || 1; // 使用生成时记录的章节ID
         
         if (chapterSelect && chapterSelect.value) {
             chapterId = parseInt(chapterSelect.value);
+            console.log('从选择器获取到章节ID:', chapterId);
+        } else {
+            console.log('未找到章节选择器或值为空，使用默认章节ID:', chapterId);
         }
         
         console.log('使用章节ID:', chapterId);
@@ -949,25 +969,29 @@ function handleResultButtonClick(event) {
  */
 function saveQuizQuestions(questions, quizId, chapterId) {
     // 显示网络请求状态
-    console.log('正在发送保存请求到:', baseUrl + '/quiz/save-questions');
+    console.log('正在发送保存请求到:', baseUrl + '/ai/quiz/save-questions');
+    console.log('保存参数 - quizId:', quizId, 'chapterId:', chapterId);
+    
+    // 确保chapterId是有效的数字
+    chapterId = parseInt(chapterId) || 1;
     
     // 显示保存中提示
     if (window.showNotification) {
-        window.showNotification('正在保存题目...', 'info');
+        window.showNotification(`正在保存题目到章节 #${chapterId}...`, 'info');
     }
     
     // 创建请求数据 - 使用格式化后的题目数据
     const requestData = {
         questions: questions, // 使用完整的格式化后题目数据
         quizId: parseInt(quizId) || 1,
-        chapterId: parseInt(chapterId) || 1
+        chapterId: chapterId
     };
     
-    console.log('发送题目数据:', JSON.stringify(requestData, null, 2));
+    console.log('请求数据 - quizId:', requestData.quizId, 'chapterId:', requestData.chapterId);
     console.log('题目数量:', questions.length);
     
     // 发送请求
-    fetch(baseUrl + '/quiz/save-questions', {
+    fetch(baseUrl + '/ai/quiz/save-questions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

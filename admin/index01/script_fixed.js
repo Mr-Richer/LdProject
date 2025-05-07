@@ -1,9 +1,66 @@
 // 设置离线模式，使用模拟数据
-window.isOfflineMode = false; // 设置为false，从API获取实际数据
+window.isOfflineMode = false; // 永久禁用离线模式，始终从API获取实际数据
 
 // API配置
 window.API_BASE_URL = 'http://localhost:3000'; // 开发环境
 // 不再使用const声明，直接使用全局变量
+
+// 设置不使用模拟API的全局标志
+window.useMockApi = false;
+
+// 初始化全局API对象，如果尚未定义
+if (!window.API) {
+    window.API = {};
+    console.log('在script_fixed.js中初始化全局API对象');
+}
+
+// 确保API.quiz对象存在
+if (!window.API.quiz) {
+    window.API.quiz = {};
+    console.log('在script_fixed.js中初始化API.quiz对象');
+}
+
+// 检查并等待API初始化完成
+function ensureApiReady() {
+    console.log('在script_fixed.js中检查API就绪状态');
+    
+    // 如果waitForApi函数存在，使用它等待API初始化
+    if (typeof window.waitForApi === 'function') {
+        return window.waitForApi();
+    }
+    
+    // 如果没有waitForApi函数，但已经有API和API.quiz对象
+    if (window.API && window.API.quiz && typeof window.API.quiz.getQuestionsByChapter === 'function') {
+        console.log('API已初始化');
+        return Promise.resolve(window.API);
+    }
+    
+    // 如果API未初始化且没有waitForApi函数，尝试初始化API
+    if (typeof window.initQuizAPI === 'function') {
+        console.log('尝试初始化API...');
+        window.initQuizAPI();
+        
+        // 再次检查API是否已初始化
+        if (window.API && window.API.quiz && typeof window.API.quiz.getQuestionsByChapter === 'function') {
+            return Promise.resolve(window.API);
+        }
+    }
+    
+    // 如果无法初始化API，返回拒绝的Promise
+    console.warn('无法初始化API，可能会影响某些功能');
+    return Promise.reject(new Error('API初始化失败'));
+}
+
+// 在页面加载完成后，确保API已初始化
+window.addEventListener('load', function() {
+    ensureApiReady().catch(error => {
+        console.error('API初始化失败:', error);
+        // 显示通知
+        if (typeof window.showNotification === 'function') {
+            window.showNotification('API初始化失败，某些功能可能无法正常工作', 'warning');
+        }
+    });
+});
 
 // 动态加载ChapterUpload组件脚本
 function loadChapterUploadScript() {
@@ -1736,14 +1793,14 @@ function initAIPre() {
     console.log('PPT模块加载已被禁用');
     
     // 加载小测生成模块
+    console.log('开始加载课堂小测模块...');
     loadScript('../src/components/quizGenerator/QuizGenerator.js')
         .then(() => {
-            if (window.QuizGenerator && typeof window.QuizGenerator.init === 'function') {
-                window.QuizGenerator.init();
-                console.log('课堂小测模块加载成功');
-            } else {
-                console.error('课堂小测模块加载失败：未找到QuizGenerator.init方法');
-            }
+            // 等待一小段时间确保模块完全初始化
+            return new Promise(resolve => setTimeout(resolve, 100));
+        })
+        .then(() => {
+            console.log('课堂小测模块加载完成，等待初始化...');
         })
         .catch(error => {
             console.error('加载课堂小测模块失败:', error);

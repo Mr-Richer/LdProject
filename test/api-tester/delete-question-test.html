@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试题目删除API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .test-group {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .delete-methods button.patch {
+            background-color: #2196F3;
+        }
+        .delete-methods button.patch:hover {
+            background-color: #0b7dda;
+        }
+        pre {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .results {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+        }
+        .log {
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .log-entry.success {
+            background-color: #e6ffe6;
+        }
+        .log-entry.error {
+            background-color: #ffe6e6;
+        }
+        .log-entry.info {
+            background-color: #e6f0ff;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>课堂小测系统 - API测试工具</h1>
+        
+        <div class="test-group">
+            <h2>配置</h2>
+            <div class="form-group">
+                <label for="api-base-url">API基础URL:</label>
+                <input type="text" id="api-base-url" value="http://localhost:3000" style="width: 300px;">
+            </div>
+            <div class="form-group">
+                <label for="question-id">题目ID:</label>
+                <input type="text" id="question-id" value="59" placeholder="输入题目ID">
+            </div>
+        </div>
+
+        <div class="test-group">
+            <h2>删除题目测试</h2>
+            <div class="delete-methods">
+                <h3>DELETE方法 (硬删除)</h3>
+                <button onclick="testDeleteEndpoint('/questions/{id}')">测试 /questions/{id}</button>
+                <button onclick="testDeleteEndpoint('/api/questions/{id}')">测试 /api/questions/{id}</button>
+                <button onclick="testDeleteEndpoint('/api/v1/questions/{id}')">测试 /api/v1/questions/{id}</button>
+                <button onclick="testDeleteEndpoint('/api/quiz/questions/{id}')">测试 /api/quiz/questions/{id}</button>
+                <button onclick="testDeleteEndpoint('/api/ai/quiz/questions/{id}')">测试 /api/ai/quiz/questions/{id}</button>
+                <button onclick="testDeleteEndpoint('/question/{id}')">测试 /question/{id}</button>
+                <button onclick="testDeleteEndpoint('/api/quiz/question/{id}')">测试 /api/quiz/question/{id}</button>
+                <button onclick="testDeleteEndpoint('/api/ai/quiz/question/{id}')">测试 /api/ai/quiz/question/{id}</button>
+                
+                <h3>PATCH方法 (软删除)</h3>
+                <button class="patch" onclick="testPatchEndpoint('/questions/{id}')">测试 /questions/{id}</button>
+                <button class="patch" onclick="testPatchEndpoint('/api/questions/{id}')">测试 /api/questions/{id}</button>
+                <button class="patch" onclick="testPatchEndpoint('/api/v1/questions/{id}')">测试 /api/v1/questions/{id}</button>
+                <button class="patch" onclick="testPatchEndpoint('/api/quiz/questions/{id}')">测试 /api/quiz/questions/{id}</button>
+                <button class="patch" onclick="testPatchEndpoint('/api/ai/quiz/questions/{id}')">测试 /api/ai/quiz/questions/{id}</button>
+                <button class="patch" onclick="testPatchEndpoint('/questions/{id}/soft-delete')">测试 /questions/{id}/soft-delete</button>
+                <button class="patch" onclick="testPatchEndpoint('/api/quiz/questions/{id}/soft-delete')">测试 /api/quiz/questions/{id}/soft-delete</button>
+            </div>
+        </div>
+        
+        <div class="results">
+            <h2>测试结果</h2>
+            <div class="log" id="log-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // 日志记录函数
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            
+            // 自动滚动到底部
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 测试DELETE端点
+        async function testDeleteEndpoint(endpoint) {
+            const baseUrl = document.getElementById('api-base-url').value;
+            const questionId = document.getElementById('question-id').value;
+            
+            if (!questionId) {
+                log('错误: 请先输入题目ID', 'error');
+                return;
+            }
+            
+            const url = `${baseUrl}${endpoint.replace('{id}', questionId)}`;
+            log(`开始测试DELETE端点: ${url}`);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const status = response.status;
+                log(`响应状态: ${status}`);
+                
+                if (response.ok) {
+                    try {
+                        const data = await response.json();
+                        log(`删除成功! 响应数据: ${JSON.stringify(data)}`, 'success');
+                    } catch (e) {
+                        log(`删除成功! (响应不是JSON格式)`, 'success');
+                    }
+                } else {
+                    if (status === 404) {
+                        log(`端点未找到 (404)`, 'error');
+                    } else {
+                        try {
+                            const errorData = await response.text();
+                            log(`删除失败: ${status} - ${errorData}`, 'error');
+                        } catch (e) {
+                            log(`删除失败: ${status}`, 'error');
+                        }
+                    }
+                }
+            } catch (error) {
+                log(`请求错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试PATCH端点(软删除)
+        async function testPatchEndpoint(endpoint) {
+            const baseUrl = document.getElementById('api-base-url').value;
+            const questionId = document.getElementById('question-id').value;
+            
+            if (!questionId) {
+                log('错误: 请先输入题目ID', 'error');
+                return;
+            }
+            
+            const url = `${baseUrl}${endpoint.replace('{id}', questionId)}`;
+            log(`开始测试PATCH端点: ${url}`);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ isDeleted: 1 })
+                });
+                
+                const status = response.status;
+                log(`响应状态: ${status}`);
+                
+                if (response.ok) {
+                    try {
+                        const data = await response.json();
+                        log(`软删除成功! 响应数据: ${JSON.stringify(data)}`, 'success');
+                    } catch (e) {
+                        log(`软删除成功! (响应不是JSON格式)`, 'success');
+                    }
+                } else {
+                    if (status === 404) {
+                        log(`端点未找到 (404)`, 'error');
+                    } else {
+                        try {
+                            const errorData = await response.text();
+                            log(`软删除失败: ${status} - ${errorData}`, 'error');
+                        } catch (e) {
+                            log(`软删除失败: ${status}`, 'error');
+                        }
+                    }
+                }
+            } catch (error) {
+                log(`请求错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 初始化
+        window.onload = function() {
+            log('测试工具已加载', 'info');
+        };
+    </script>
+</body>
+</html> 
