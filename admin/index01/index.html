@@ -12,6 +12,79 @@
     <link rel="stylesheet" href="../src/styles/chapter-upload.css">
     <!-- 题目表格样式 -->
     <link rel="stylesheet" href="../src/styles/quiz-table.css">
+    <!-- 思维导图样式 -->
+    <link rel="stylesheet" href="../src/styles/mindmap.css">
+    <!-- ECharts库 -->
+    <script src="../node_modules/echarts/dist/echarts.min.js"></script>
+    <style>
+        /* 思维导图容器样式 */
+        .mindmap-container {
+            width: 100%;
+            height: 600px;
+            position: relative;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        /* 思维导图加载指示器 */
+        .loading-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .loading-indicator .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 按钮波纹效果 */
+        .ripple-effect {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            transition: transform 0.5s linear;
+            pointer-events: none;
+        }
+        
+        /* 按钮增强样式 */
+        #mindmap-generate-btn {
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+        
+        #mindmap-generate-btn:hover {
+            background-color: #1a73e8;
+        }
+        
+        /* ECharts容器样式 */
+        #echarts-mindmap {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -791,7 +864,9 @@
                                             </div>
                                         </div>
                                         <div class="result-content">
-                                           
+                                            <div class="mindmap-container">
+                                                <!-- 思维导图将在这里渲染 -->
+                                            </div>
                                         </div>
                                     </div>
                                     
@@ -878,10 +953,14 @@
                                             <label class="en">Knowledge Point Prompt</label>
                                             <textarea class="prompt-input zh" placeholder="请输入要拓展的知识点，例如：中国传统节日的起源与演变..."></textarea>
                                             <textarea class="prompt-input en" placeholder="Please enter knowledge points to expand, e.g.: The origin and evolution of traditional Chinese festivals..."></textarea>
-                                            <button class="generate-btn">
-                                                <i class="fas fa-sitemap"></i>
-                                                <span class="zh">生成思维导图</span>
-                                                <span class="en">Generate Mind Map</span>
+                                            <div class="prompt-help">
+                                                <p class="zh"><i class="fas fa-lightbulb"></i> 提示：输入核心知识点，AI将自动拓展相关内容并生成完整思维导图</p>
+                                                <p class="en"><i class="fas fa-lightbulb"></i> Tip: Enter a core knowledge point, AI will automatically expand related content and generate a complete mind map</p>
+                                            </div>
+                                            <button class="generate-btn ai-generate-btn" id="mindmap-generate-btn" data-type="mindmap">
+                                                <i class="fas fa-brain"></i>
+                                                <span class="zh">AI生成思维导图</span>
+                                                <span class="en">AI Generate Mind Map</span>
                                             </button>
                                         </div>
                                     </div>
@@ -908,8 +987,25 @@
                                             </div>
                                         </div>
                                         <div class="result-content">
-                                            <div class="mindmap-container">
-                                                <img src="../picture/nao.jpg" alt="思维导图" class="mindmap-img">
+                                            <div class="mindmap-container" id="mindmap-container" style="width: 100%; height: 600px; position: relative;">
+                                                <div class="mindmap-placeholder">
+                                                    <div class="placeholder-content">
+                                                        <i class="fas fa-project-diagram"></i>
+                                                        <p class="zh">输入知识点并点击"AI生成思维导图"按钮开始创建</p>
+                                                        <p class="en">Enter knowledge point and click "AI Generate Mind Map" button to create</p>
+                                                        <!-- 添加一个备用的生成按钮 -->
+                                                        <button id="backup-generate-btn" class="generate-btn" style="margin-top: 15px; padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                                            <i class="fas fa-sync-alt"></i>
+                                                            <span class="zh">点击生成思维导图</span>
+                                                            <span class="en">Generate Mind Map</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <!-- 添加调试信息区域 -->
+                                                <div id="debug-info" style="display: none; margin-top: 10px; padding: 10px; background-color: #f8f9fa; border: 1px solid #ccc; border-radius: 5px; font-size: 12px; color: #333; max-height: 200px; overflow-y: auto;">
+                                                    <h4 style="margin-top: 0;">调试信息</h4>
+                                                    <div id="debug-content"></div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -4282,7 +4378,37 @@
 
     <!-- JavaScript 文件 -->
     <!-- 配置文件（在其他脚本之前加载）-->
-    <script src="../src/config.js"></script>
+    <script>
+        // 内联配置文件，避免使用export语法
+        window.APP_CONFIG = {
+            API_BASE_URL: 'http://localhost:3000',
+            UPLOAD_CONFIG: {
+                image: {
+                    url: 'http://localhost:3000/api/upload/image',
+                    maxSize: 5 * 1024 * 1024, // 5MB
+                    supportedTypes: ['image/jpeg', 'image/png', 'image/gif'],
+                    defaultImage: '../picture/banner.jpg'
+                },
+                courseware: {
+                    url: 'http://localhost:3000/api/upload/ppt',
+                    maxSize: 100 * 1024 * 1024, // 100MB
+                    supportedTypes: ['.ppt', '.pptx', '.pptist'],
+                    defaultPath: '',
+                    storagePath: '/uploads/ppt/', // 服务器存储路径
+                    clientPath: '/uploads/ppt/' // 客户端访问路径
+                }
+            },
+            CHAPTER_API: {
+                list: 'http://localhost:3000/api/chapters',
+                create: 'http://localhost:3000/api/chapters',
+                update: function(id) { return `http://localhost:3000/api/chapters/${id}`; },
+                delete: function(id) { return `http://localhost:3000/api/chapters/${id}`; },
+                detail: function(id) { return `http://localhost:3000/api/chapters/${id}`; },
+                copyImage: 'http://localhost:3000/api/admin/copy-image'
+            }
+        };
+        console.log('配置已加载:', window.APP_CONFIG);
+    </script>
     <!-- 通知模块 -->
     <script src="../src/js/notification.js"></script>
     <!-- 主要脚本 -->
@@ -4300,6 +4426,9 @@
     <script src="js/quiz-loader.js"></script>
     <!-- 课堂小测按钮修复脚本 -->
     <script src="../src/js/modules/quiz_button_fix.js"></script>
+    
+    <!-- 思维导图相关脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </body>
-</html>
+</html> 
 

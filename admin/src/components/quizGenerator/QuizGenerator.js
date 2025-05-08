@@ -30,8 +30,10 @@ const APIManager = {
             window.API.quiz = {
                 async getQuestionsByChapter(chapterId) {
                     try {
-                        // 修改API路径
-                        const response = await fetch(`http://localhost:3000/api/ai/quiz/questions/chapter/${chapterId}`, {
+                        // 使用window.API_BASE_URL
+                        const API_BASE_URL = window.API_BASE_URL || window.location.origin;
+                        
+                        const response = await fetch(`${API_BASE_URL}/api/ai/quiz/questions/chapter/${chapterId}`, {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -59,8 +61,10 @@ const APIManager = {
                 
                 async getQuestions() {
                     try {
-                        // 修改API路径
-                        const response = await fetch('http://localhost:3000/api/ai/quiz/questions', {
+                        // 使用window.API_BASE_URL
+                        const API_BASE_URL = window.API_BASE_URL || window.location.origin;
+                        
+                        const response = await fetch(`${API_BASE_URL}/api/ai/quiz/questions`, {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -88,7 +92,10 @@ const APIManager = {
                 
                 async saveQuestions(questions, quizId, chapterId) {
                     try {
-                        const response = await fetch('http://localhost:3000/api/ai/quiz/save-questions', {
+                        // 使用window.API_BASE_URL
+                        const API_BASE_URL = window.API_BASE_URL || window.location.origin;
+                        
+                        const response = await fetch(`${API_BASE_URL}/api/ai/quiz/save-questions`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1016,8 +1023,8 @@ function deleteQuestion(questionId, index, container) {
         window.showNotification ? 
             window.showNotification('删除失败：无法找到容器元素', 'error') : 
             alert('删除失败：无法找到容器元素');
-        return;
-    }
+            return;
+        }
     
     const row = container.querySelector(`tr[data-question-index="${index}"]`);
     if (!row) {
@@ -1032,14 +1039,14 @@ function deleteQuestion(questionId, index, container) {
     const chapterSelector = document.getElementById('chapter-select');
     const currentChapterId = chapterSelector ? chapterSelector.value : null;
         
-    // 显示loading状态
-    const td = row.querySelector('.column-actions');
+        // 显示loading状态
+            const td = row.querySelector('.column-actions');
     if (!td) {
         console.error('找不到操作列');
         return;
     }
     
-    const originalContent = td.innerHTML;
+            const originalContent = td.innerHTML;
     td.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="zh">删除中...</span><span class="en">Deleting...</span>';
     
     // 检查这是否是最后一道题目
@@ -1051,7 +1058,7 @@ function deleteQuestion(questionId, index, container) {
         console.log('开始调用API删除题目:', questionId);
         
         // 获取API基础URL
-        const apiBaseUrl = window.API_BASE_URL || 'http://localhost:3000';
+        const API_BASE_URL = window.API_BASE_URL || window.location.origin;
         
         // 优先使用新的删除端点
         const primaryEndpoints = [
@@ -1091,10 +1098,10 @@ function deleteQuestion(questionId, index, container) {
         async function trySoftDelete() {
             // 先尝试专用的软删除端点
             try {
-                console.log(`尝试软删除专用端点: ${apiBaseUrl}${primaryEndpoints[1]}`);
+                console.log(`尝试软删除专用端点: ${API_BASE_URL}${primaryEndpoints[1]}`);
                 
                 // 发送PATCH请求进行软删除
-                const response = await fetch(`${apiBaseUrl}${primaryEndpoints[1]}`, {
+                const response = await fetch(`${API_BASE_URL}${primaryEndpoints[1]}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1115,10 +1122,10 @@ function deleteQuestion(questionId, index, container) {
             
             // 尝试普通PATCH更新isDeleted字段
             try {
-                console.log(`尝试PATCH更新端点: ${apiBaseUrl}${primaryEndpoints[0]}`);
+                console.log(`尝试PATCH更新端点: ${API_BASE_URL}${primaryEndpoints[0]}`);
                 
                 // 发送PATCH请求更新isDeleted字段
-                const response = await fetch(`${apiBaseUrl}${primaryEndpoints[0]}`, {
+                const response = await fetch(`${API_BASE_URL}${primaryEndpoints[0]}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1142,10 +1149,10 @@ function deleteQuestion(questionId, index, container) {
             for (let i = 0; i < fallbackEndpoints.length; i++) {
                 const endpoint = fallbackEndpoints[i];
                 try {
-                    console.log(`尝试旧版PATCH更新端点 (${i+1}/${fallbackEndpoints.length}): ${apiBaseUrl}${endpoint}`);
+                    console.log(`尝试旧版PATCH更新端点 (${i+1}/${fallbackEndpoints.length}): ${API_BASE_URL}${endpoint}`);
                     
                     // 发送PATCH请求更新isDeleted字段
-                    const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1189,10 +1196,10 @@ function deleteQuestion(questionId, index, container) {
             }
             
             const endpoint = endpoints[endpointIndex];
-            console.log(`尝试硬删除端点 (${endpointIndex+1}/${endpoints.length}): ${apiBaseUrl}${endpoint}`);
+            console.log(`尝试硬删除端点 (${endpointIndex+1}/${endpoints.length}): ${API_BASE_URL}${endpoint}`);
             
             // 发送DELETE请求
-            fetch(`${apiBaseUrl}${endpoint}`, {
+            fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1255,11 +1262,11 @@ function deleteQuestion(questionId, index, container) {
         
         // 删除成功后的处理
         function handleDeleteSuccess(endpoint) {
-            // 动画移除行
-            row.style.transition = "all 0.3s";
-            row.style.opacity = "0";
-            row.style.height = "0";
-            setTimeout(() => {
+                    // 动画移除行
+                    row.style.transition = "all 0.3s";
+                    row.style.opacity = "0";
+                    row.style.height = "0";
+                    setTimeout(() => {
                 // 确保行元素仍然在DOM中
                 if (row && row.parentNode) {
                     row.parentNode.removeChild(row);
@@ -1300,15 +1307,15 @@ function deleteQuestion(questionId, index, container) {
                         }, 500);
                     }
                 }
-            }, 300);
+                    }, 300);
         }
     } else {
         // 如果是临时生成的题目，直接从DOM中移除
         console.log('移除临时题目');
-        row.style.transition = "all 0.3s";
-        row.style.opacity = "0";
-        row.style.height = "0";
-        setTimeout(() => {
+            row.style.transition = "all 0.3s";
+            row.style.opacity = "0";
+            row.style.height = "0";
+            setTimeout(() => {
             if (row && row.parentNode) {
                 row.parentNode.removeChild(row);
             }
@@ -1316,8 +1323,8 @@ function deleteQuestion(questionId, index, container) {
                 if (isLastQuestion) {
                     showEmptyState(container);
                 } else {
-                    checkEmptyState(container);
-                }
+                checkEmptyState(container);
+        }
             }
             window.showNotification ? 
                 window.showNotification('临时题目已移除', 'success') : 
@@ -1328,32 +1335,32 @@ function deleteQuestion(questionId, index, container) {
 
 /**
  * 显示空状态（当没有题目时）
- * @param {HTMLElement} container - 容器元素 
+ * @param {HTMLElement} container - 容器元素
  */
 function showEmptyState(container) {
     if (!container) return;
     
-    const tbody = container.querySelector('tbody');
+        const tbody = container.querySelector('tbody');
     if (!tbody) return;
     
     // 清空已有行
     tbody.innerHTML = '';
     
     // 添加空状态行
-    const emptyRow = document.createElement('tr');
-    emptyRow.className = 'empty-row';
-    emptyRow.innerHTML = `
-        <td colspan="4" class="empty-message">
-            <span class="zh">暂无题目数据</span>
-            <span class="en">No questions available</span>
-        </td>`;
-    tbody.appendChild(emptyRow);
-    
-    // 移除操作按钮区域
-    const actionsDiv = container.querySelector('.quiz-actions');
-    if (actionsDiv) {
-        actionsDiv.remove();
-    }
+            const emptyRow = document.createElement('tr');
+            emptyRow.className = 'empty-row';
+            emptyRow.innerHTML = `
+                <td colspan="4" class="empty-message">
+                    <span class="zh">暂无题目数据</span>
+                    <span class="en">No questions available</span>
+                </td>`;
+            tbody.appendChild(emptyRow);
+            
+            // 移除操作按钮区域
+            const actionsDiv = container.querySelector('.quiz-actions');
+            if (actionsDiv) {
+                actionsDiv.remove();
+            }
     
     console.log('显示无数据状态');
 }
@@ -1458,7 +1465,7 @@ async function directSaveQuestions(questions, chapterId) {
     window.showNotification ? window.showNotification('正在保存题目...', 'info') : console.log('正在保存题目...');
     
     // 获取API基础URL
-    const apiBaseUrl = window.API_BASE_URL || 'http://localhost:3000';
+    const API_BASE_URL = window.API_BASE_URL || window.location.origin;
     
     // 创建可能的API端点数组
     const possibleEndpoints = [
@@ -1599,11 +1606,11 @@ async function directSaveQuestions(questions, chapterId) {
         const endpoint = possibleEndpoints[endpointIndex];
         const requestFormat = requestFormats[formatIndex];
         
-        console.log(`尝试保存端点 (${endpointIndex+1}/${possibleEndpoints.length}) 格式 (${formatIndex+1}/${requestFormats.length}): ${apiBaseUrl}${endpoint}`);
+        console.log(`尝试保存端点 (${endpointIndex+1}/${possibleEndpoints.length}) 格式 (${formatIndex+1}/${requestFormats.length}): ${API_BASE_URL}${endpoint}`);
         
         try {
             // 发送请求
-            const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': requestFormat.contentType,
@@ -1643,7 +1650,7 @@ async function directSaveQuestions(questions, chapterId) {
             // 其他错误状态
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        } catch (error) {
+    } catch (error) {
             console.warn(`端点 ${endpoint} 格式 ${formatIndex+1} 失败:`, error.message);
             
             if (formatIndex < requestFormats.length - 1) {

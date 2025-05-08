@@ -1,0 +1,273 @@
+/* 思维导图组件样式 */
+
+/* 思维导图容器 */
+.mindmap-container {
+  position: relative;
+  width: 100%;
+  min-height: 500px;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* 思维导图占位符 */
+.mindmap-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+.placeholder-content {
+  text-align: center;
+  color: #aaa;
+}
+
+.placeholder-content i {
+  font-size: 48px;
+  margin-bottom: 20px;
+  color: #6c5ce7;
+}
+
+.placeholder-content p {
+  font-size: 16px;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* AI生成按钮 */
+.ai-generate-btn {
+  margin-left: 10px;
+  background-color: #6c5ce7 !important;
+}
+
+.ai-generate-btn:hover {
+  background-color: #5b47e5 !important;
+}
+
+.ai-generate-btn i {
+  margin-right: 5px;
+}
+
+/* 提示帮助文本 */
+.prompt-help {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #f0f4ff;
+  border-left: 4px solid #6c5ce7;
+  border-radius: 4px;
+}
+
+.prompt-help p {
+  margin: 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.prompt-help i {
+  color: #6c5ce7;
+  margin-right: 5px;
+}
+
+/* ECharts容器 */
+#echarts-mindmap {
+  width: 100%;
+  height: 500px;
+  transition: all 0.3s ease;
+}
+
+/* 全屏模式 */
+.fullscreen-mode {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999;
+  background-color: white;
+}
+
+/* 加载指示器 */
+.loading-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.loading-indicator .spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #6c5ce7;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 知识拓展结果 */
+.knowledge-result {
+  margin-top: 20px;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.result-header h3 {
+  font-size: 18px;
+  margin: 0;
+  color: #333;
+}
+
+.result-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.result-action-btn {
+  padding: 6px 12px;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.result-action-btn:hover {
+  background: #e9ecef;
+}
+
+.result-action-btn i {
+  margin-right: 5px;
+}
+
+/* 知识拓展列表 */
+.knowledge-expansion-list {
+  margin-top: 30px;
+}
+
+.expansion-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.expansion-table th,
+.expansion-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.expansion-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+}
+
+.expansion-table tbody tr:hover {
+  background-color: #f1f3f5;
+}
+
+.col-number {
+  width: 60px;
+}
+
+.col-title {
+  width: 45%;
+}
+
+.col-type {
+  width: 25%;
+}
+
+.col-actions {
+  width: 120px;
+}
+
+.expansion-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: white;
+}
+
+.expansion-badge.regional {
+  background-color: #2ecc71;
+}
+
+.expansion-badge.school {
+  background-color: #37b24d;
+}
+
+.expansion-badge.interdisciplinary {
+  background-color: #f03e3e;
+}
+
+.expansion-badge.comparative {
+  background-color: #ae3ec9;
+}
+
+.expansion-badge.history {
+  background-color: #f76707;
+}
+
+.expansion-badge.art {
+  background-color: #1098ad;
+}
+
+.expansion-badge.literature {
+  background-color: #7048e8;
+}
+
+.expansion-badge.science {
+  background-color: #40c057;
+}
+
+.expansion-badge.geography {
+  background-color: #fab005;
+}
+
+.expansion-action-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.expansion-action-btn.preview {
+  color: #4dabf7;
+}
+
+.expansion-action-btn.edit {
+  color: #37b24d;
+}
+
+.expansion-action-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+} 

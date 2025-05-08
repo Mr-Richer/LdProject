@@ -3,8 +3,18 @@
  * 部署时只需修改此文件中的配置项
  */
 
-// API服务器地址
-const API_BASE_URL = 'http://localhost:3000';
+// API基础URL配置
+export const API_BASE_URL = 'http://localhost:3000'; // 请根据实际后端服务器地址进行修改
+
+// 检查API_BASE_URL是否正确配置
+(function validateConfig() {
+  console.log('系统配置已加载，API基础URL:', API_BASE_URL);
+  
+  // 如果当前不是localhost环境，给出警告
+  if (window.location.hostname !== 'localhost' && API_BASE_URL.includes('localhost')) {
+    console.warn('警告: 当前不是本地环境，但API地址配置为localhost，这可能导致跨域问题');
+  }
+})();
 
 // 上传文件配置
 const UPLOAD_CONFIG = {

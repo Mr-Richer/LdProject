@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>思维导图测试</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>思维导图测试平台</h1>
+        
+        <div class="control-panel">
+            <div class="input-group">
+                <label for="topicInput">主题:</label>
+                <input type="text" id="topicInput" placeholder="请输入主题，如：中国传统文化" value="中国园林艺术">
+            </div>
+            
+            <div class="button-group">
+                <button id="generateBtn" class="btn primary">生成思维导图</button>
+                <button id="saveBtn" class="btn">保存为图片</button>
+                <button id="fullscreenBtn" class="btn">全屏显示</button>
+            </div>
+            
+            <div class="select-group">
+                <label for="layoutSelect">布局:</label>
+                <select id="layoutSelect">
+                    <option value="radial" selected>环形布局</option>
+                    <option value="tree">树形布局</option>
+                </select>
+                
+                <label for="themeSelect">主题:</label>
+                <select id="themeSelect">
+                    <option value="default">默认主题</option>
+                    <option value="colorful">多彩主题</option>
+                    <option value="dark">暗色主题</option>
+                    <option value="modern">现代主题</option>
+                    <option value="dark-modern" selected>黑色现代主题</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="mindmap">思维导图</button>
+                <button class="tab-btn" data-tab="text-input">文本生成</button>
+                <button class="tab-btn" data-tab="ai-input">AI生成</button>
+                <button class="tab-btn" data-tab="db-data">数据库</button>
+                <button class="tab-btn" data-tab="data">数据结构</button>
+                <button class="tab-btn" data-tab="api">API设置</button>
+            </div>
+            
+            <div class="tab-content active" data-tab="mindmap">
+                <div id="mindmap-container"></div>
+            </div>
+            
+            <div class="tab-content" data-tab="text-input">
+                <h3>从文本生成思维导图</h3>
+                <p class="description">将文本粘贴到下方输入框，系统将尝试分析内容并生成对应的思维导图。</p>
+                
+                <div class="text-input-container">
+                    <textarea id="textInput" rows="10" placeholder="请输入或粘贴文本内容，建议包含清晰的层次结构和关键词..."></textarea>
+                    
+                    <div class="input-group">
+                        <label for="textTopicInput">主题:</label>
+                        <input type="text" id="textTopicInput" placeholder="请输入主题" value="中国传统文化">
+                    </div>
+                    
+                    <button id="generateFromTextBtn" class="btn primary">从文本生成</button>
+                </div>
+                
+                <div class="text-examples">
+                    <h4>示例文本:</h4>
+                    <button class="example-btn" data-example="culture">中国传统文化示例</button>
+                    <button class="example-btn" data-example="education">教育课程示例</button>
+                    <button class="example-btn" data-example="philosophy">哲学思想示例</button>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab="ai-input">
+                <h3>AI智能生成思维导图</h3>
+                <p class="description">使用AI技术生成结构化思维导图，可以选择是否结合知识库数据。</p>
+                
+                <div class="ai-input-container">
+                    <div class="input-group">
+                        <label for="aiTopicInput">主题:</label>
+                        <input type="text" id="aiTopicInput" placeholder="请输入主题，如：中国园林艺术" value="中国园林艺术">
+                    </div>
+                    
+                    <div class="option-group">
+                        <label>
+                            <input type="checkbox" id="useKnowledgeBase" checked>
+                            使用知识库增强内容
+                        </label>
+                    </div>
+                    
+                    <textarea id="aiPromptInput" rows="5" placeholder="可选：附加提示内容，提供更多背景信息以改进生成质量..."></textarea>
+                    
+                    <button id="generateFromAiBtn" class="btn primary">AI生成思维导图</button>
+                    
+                    <div class="ai-status">
+                        <span id="aiStatusText" class="status-text">准备就绪</span>
+                        <div id="aiLoadingIndicator" class="loading-indicator hidden"></div>
+                    </div>
+                </div>
+                
+                <div class="ai-settings">
+                    <h4>AI设置</h4>
+                    <div class="settings-grid">
+                        <div class="settings-row">
+                            <label for="aiModelSelect">模型:</label>
+                            <select id="aiModelSelect">
+                                <option value="deepseek/deepseek-chat-v3-0324:free">DeepSeek Chat</option>
+                                <option value="anthropic/claude-3-haiku-20240307">Claude 3 Haiku</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <label for="apiKeyInput">API密钥:</label>
+                            <input type="password" id="apiKeyInput" value="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">
+                            <button id="showApiKeyBtn" class="btn small">显示</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab="db-data">
+                <h3>数据库思维导图</h3>
+                <p class="description">从数据库中查询并显示思维导图数据。</p>
+                
+                <div class="db-panel">
+                    <div class="connection-panel">
+                        <div class="input-group">
+                            <label for="apiEndpointInput">API端点:</label>
+                            <input type="text" id="apiEndpointInput" value="http://localhost:3000/api/mindmap">
+                        </div>
+                        <button id="testConnectionBtn" class="btn">测试连接</button>
+                        <span id="connectionStatus" class="status-text">未连接</span>
+                    </div>
+                    
+                    <div class="data-panel">
+                        <div class="panel-section">
+                            <h4>思维导图列表</h4>
+                            <select id="mindmapSelect" size="5">
+                                <option value="" disabled selected>请先连接数据库...</option>
+                            </select>
+                            <button id="loadMindmapBtn" class="btn" disabled>加载所选思维导图</button>
+                        </div>
+                        
+                        <div class="panel-section">
+                            <h4>知识点分类</h4>
+                            <select id="categorySelect">
+                                <option value="">所有分类</option>
+                                <option value="history">历史</option>
+                                <option value="art">艺术</option>
+                                <option value="literature">文学</option>
+                                <option value="science">科学</option>
+                                <option value="geography">地理</option>
+                            </select>
+                            <button id="loadKnowledgePointsBtn" class="btn">加载知识点</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab="data">
+                <h3>思维导图数据结构</h3>
+                <div class="data-viewer">
+                    <pre id="dataViewer"></pre>
+                </div>
+                <div class="data-editor">
+                    <textarea id="dataEditor" rows="10"></textarea>
+                    <button id="applyDataBtn" class="btn">应用更改</button>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab="api">
+                <h3>API设置</h3>
+                <div class="api-settings">
+                    <div class="settings-section">
+                        <h4>数据库API</h4>
+                        <div class="input-group">
+                            <label for="dbApiUrlInput">API地址:</label>
+                            <input type="text" id="dbApiUrlInput" value="http://localhost:3000/api/mindmap">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>AI生成API</h4>
+                        <div class="input-group">
+                            <label for="aiApiUrlInput">API地址:</label>
+                            <input type="text" id="aiApiUrlInput" value="https://openrouter.ai/api/v1/chat/completions">
+                        </div>
+                        <div class="input-group">
+                            <label for="aiApiKeyInput">API密钥:</label>
+                            <input type="password" id="aiApiKeyInput" value="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">
+                        </div>
+                    </div>
+                    
+                    <button id="saveSettingsBtn" class="btn primary">保存设置</button>
+                    <div id="settingsSavedMsg" class="success-message hidden">设置已保存</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <span id="status">准备就绪</span>
+        </div>
+    </div>
+
+    <!-- 示例文本数据 -->
+    <script>
+        const exampleTexts = {
+            culture: `中国传统文化是世界文明的重要组成部分，它包括物质文化和非物质文化两大方面。
+物质文化主要包括：饮食文化（如八大菜系、茶文化、酒文化），服饰文化（如汉服、旗袍、唐装等），建筑文化（如宫殿建筑、民居建筑、园林建筑）等。
+非物质文化主要包括：传统节日习俗（如春节、中秋节、端午节），传统艺术（如戏曲、书法、国画），传统哲学思想（如儒家思想、道家思想、佛家思想）等。
+中国传统文化具有悠久的历史、博大的内涵和鲜明的特色，对世界文化产生了深远影响。`,
+            
+            education: `现代教育体系主要分为基础教育、高等教育和职业教育三大类。
+基础教育包括：学前教育（如幼儿园），义务教育（小学和初中），高中教育。基础教育的主要目标是培养学生的基本素养和能力。
+高等教育包括：本科教育、研究生教育（硕士和博士）。高等教育注重专业知识和研究能力的培养。
+职业教育包括：中等职业教育、高等职业教育、继续教育。职业教育强调实用技能和职业素养的培养。
+现代教育理念强调：创新能力、批判性思维、合作精神和终身学习。`,
+            
+            philosophy: `中国哲学思想主要有儒家、道家、法家、墨家和兵家等几大流派。
+儒家思想核心是仁、义、礼、智、信，强调中庸之道、修身齐家治国平天下。代表人物有孔子、孟子、荀子等。
+道家思想主张无为而治、顺应自然，核心是"道法自然"。代表人物有老子、庄子等。
+法家思想强调以法治国、赏罚分明。代表人物有韩非子、商鞅等。
+墨家思想主张兼爱非攻、节用尚贤。代表人物是墨子。
+兵家思想讲究谋略、势变，强调知己知彼。代表著作是《孙子兵法》。`
+        };
+        
+        // 知识点数据预览 (来自mindmap_tables.sql)
+        const knowledgePointsPreview = [
+            { id: 1, title: '发展历程', category: 'history', description: '中国园林艺术的发展历程与演变', keywords: '秦汉,魏晋,唐宋,明清,近代' },
+            { id: 2, title: '风格流派', category: 'history', description: '中国园林艺术的主要风格与流派', keywords: '北方园林,江南园林,皇家园林,私家园林,寺庙园林' },
+            { id: 3, title: '代表园林', category: 'history', description: '中国历史上的代表性园林作品', keywords: '颐和园,拙政园,留园,个园,狮子林' },
+            { id: 4, title: '造园艺术', category: 'art', description: '中国园林的造园艺术与技巧', keywords: '借景,对景,框景,漏景,障景' },
+            { id: 5, title: '园林要素', category: 'art', description: '中国园林的主要组成要素', keywords: '山水,建筑,植物,小品,意境' }
+        ];
+    </script>
+
+    <!-- 引入模块脚本 -->
+    <script src="js/auto-mindmap.js"></script>
+    <script src="js/db-connector.js"></script>
+    <script src="js/data-converter.js"></script>
+    <script src="js/ai-mindmap-generator.js"></script>
+    <script src="js/mindmap-test.js"></script>
+</body>
+</html> 
+                    </div>
+                    
+                    <textarea id="aiPromptInput" rows="5" placeholder="可选：附加提示内容，提供更多背景信息以改进生成质量..."></textarea>
+                    
+                    <button id="generateFromAiBtn" class="btn primary">AI生成思维导图</button>
+                    
+                    <div class="ai-status">
+                        <span id="aiStatusText" class="status-text">准备就绪</span>
+                        <div id="aiLoadingIndicator" class="loading-indicator hidden"></div>
+                    </div>
+                </div>
+                
+                <div class="ai-settings">
+                    <h4>AI设置</h4>
+                    <div class="settings-grid">
+                        <div class="settings-row">
+                            <label for="aiModelSelect">模型:</label>
+                            <select id="aiModelSelect">
+                                <option value="deepseek/deepseek-chat-v3-0324:free">DeepSeek Chat</option>
+                                <option value="anthropic/claude-3-haiku-20240307">Claude 3 Haiku</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <label for="apiKeyInput">API密钥:</label>
+                            <input type="password" id="apiKeyInput" value="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">
+                            <button id="showApiKeyBtn" class="btn small">显示</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab="db-data">
+                <h3>数据库思维导图</h3>
+                <p class="description">从数据库中查询并显示思维导图数据。</p>
+                
+                <div class="db-panel">
+                    <div class="connection-panel">
+                        <div class="input-group">
+                            <label for="apiEndpointInput">API端点:</label>
+                            <input type="text" id="apiEndpointInput" value="http://localhost:3000/api/mindmap">
+                        </div>
+                        <button id="testConnectionBtn" class="btn">测试连接</button>
+                        <span id="connectionStatus" class="status-text">未连接</span>
+                    </div>
+                    
+                    <div class="data-panel">
+                        <div class="panel-section">
+                            <h4>思维导图列表</h4>
+                            <select id="mindmapSelect" size="5">
+                                <option value="" disabled selected>请先连接数据库...</option>
+                            </select>
+                            <button id="loadMindmapBtn" class="btn" disabled>加载所选思维导图</button>
+                        </div>
+                        
+                        <div class="panel-section">
+                            <h4>知识点分类</h4>
+                            <select id="categorySelect">
+                                <option value="">所有分类</option>
+                                <option value="history">历史</option>
+                                <option value="art">艺术</option>
+                                <option value="literature">文学</option>
+                                <option value="science">科学</option>
+                                <option value="geography">地理</option>
+                            </select>
+                            <button id="loadKnowledgePointsBtn" class="btn">加载知识点</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab="data">
+                <h3>思维导图数据结构</h3>
+                <div class="data-viewer">
+                    <pre id="dataViewer"></pre>
+                </div>
+                <div class="data-editor">
+                    <textarea id="dataEditor" rows="10"></textarea>
+                    <button id="applyDataBtn" class="btn">应用更改</button>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab="api">
+                <h3>API设置</h3>
+                <div class="api-settings">
+                    <div class="settings-section">
+                        <h4>数据库API</h4>
+                        <div class="input-group">
+                            <label for="dbApiUrlInput">API地址:</label>
+                            <input type="text" id="dbApiUrlInput" value="http://localhost:3000/api/mindmap">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>AI生成API</h4>
+                        <div class="input-group">
+                            <label for="aiApiUrlInput">API地址:</label>
+                            <input type="text" id="aiApiUrlInput" value="https://openrouter.ai/api/v1/chat/completions">
+                        </div>
+                        <div class="input-group">
+                            <label for="aiApiKeyInput">API密钥:</label>
+                            <input type="password" id="aiApiKeyInput" value="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">
+                        </div>
+                    </div>
+                    
+                    <button id="saveSettingsBtn" class="btn primary">保存设置</button>
+                    <div id="settingsSavedMsg" class="success-message hidden">设置已保存</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <span id="status">准备就绪</span>
+        </div>
+    </div>
+
+    <!-- 示例文本数据 -->
+    <script>
+        const exampleTexts = {
+            culture: `中国传统文化是世界文明的重要组成部分，它包括物质文化和非物质文化两大方面。
+物质文化主要包括：饮食文化（如八大菜系、茶文化、酒文化），服饰文化（如汉服、旗袍、唐装等），建筑文化（如宫殿建筑、民居建筑、园林建筑）等。
+非物质文化主要包括：传统节日习俗（如春节、中秋节、端午节），传统艺术（如戏曲、书法、国画），传统哲学思想（如儒家思想、道家思想、佛家思想）等。
+中国传统文化具有悠久的历史、博大的内涵和鲜明的特色，对世界文化产生了深远影响。`,
+            
+            education: `现代教育体系主要分为基础教育、高等教育和职业教育三大类。
+基础教育包括：学前教育（如幼儿园），义务教育（小学和初中），高中教育。基础教育的主要目标是培养学生的基本素养和能力。
+高等教育包括：本科教育、研究生教育（硕士和博士）。高等教育注重专业知识和研究能力的培养。
+职业教育包括：中等职业教育、高等职业教育、继续教育。职业教育强调实用技能和职业素养的培养。
+现代教育理念强调：创新能力、批判性思维、合作精神和终身学习。`,
+            
+            philosophy: `中国哲学思想主要有儒家、道家、法家、墨家和兵家等几大流派。
+儒家思想核心是仁、义、礼、智、信，强调中庸之道、修身齐家治国平天下。代表人物有孔子、孟子、荀子等。
+道家思想主张无为而治、顺应自然，核心是"道法自然"。代表人物有老子、庄子等。
+法家思想强调以法治国、赏罚分明。代表人物有韩非子、商鞅等。
+墨家思想主张兼爱非攻、节用尚贤。代表人物是墨子。
+兵家思想讲究谋略、势变，强调知己知彼。代表著作是《孙子兵法》。`
+        };
+        
+        // 知识点数据预览 (来自mindmap_tables.sql)
+        const knowledgePointsPreview = [
+            { id: 1, title: '发展历程', category: 'history', description: '中国园林艺术的发展历程与演变', keywords: '秦汉,魏晋,唐宋,明清,近代' },
+            { id: 2, title: '风格流派', category: 'history', description: '中国园林艺术的主要风格与流派', keywords: '北方园林,江南园林,皇家园林,私家园林,寺庙园林' },
+            { id: 3, title: '代表园林', category: 'history', description: '中国历史上的代表性园林作品', keywords: '颐和园,拙政园,留园,个园,狮子林' },
+            { id: 4, title: '造园艺术', category: 'art', description: '中国园林的造园艺术与技巧', keywords: '借景,对景,框景,漏景,障景' },
+            { id: 5, title: '园林要素', category: 'art', description: '中国园林的主要组成要素', keywords: '山水,建筑,植物,小品,意境' }
+        ];
+    </script>
+
+    <!-- 引入模块脚本 -->
+    <script src="js/auto-mindmap.js"></script>
+    <script src="js/db-connector.js"></script>
+    <script src="js/data-converter.js"></script>
+    <script src="js/ai-mindmap-generator.js"></script>
+    <script src="js/mindmap-test.js"></script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>思维导图测试</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>思维导图测试平台</h1>
+        
+        <div class="control-panel">
+            <div class="input-group">
+                <label for="topicInput">主题:</label>
+                <input type="text" id="topicInput" placeholder="请输入主题，如：中国传统文化" value="中国传统文化">
+            </div>
+            
+            <div class="button-group">
+                <button id="generateBtn" class="btn primary">生成思维导图</button>
+                <button id="saveBtn" class="btn">保存为图片</button>
+                <button id="fullscreenBtn" class="btn">全屏显示</button>
+            </div>
+            
+            <div class="select-group">
+                <label for="layoutSelect">布局:</label>
+                <select id="layoutSelect">
+                    <option value="radial">环形布局</option>
+                    <option value="tree">树形布局</option>
+                </select>
+                
+                <label for="themeSelect">主题:</label>
+                <select id="themeSelect">
+                    <option value="default">默认主题</option>
+                    <option value="colorful">多彩主题</option>
+                    <option value="dark">暗色主题</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="mindmap">思维导图</button>
+                <button class="tab-btn" data-tab="data">数据结构</button>
+                <button class="tab-btn" data-tab="api">API测试</button>
+            </div>
+            
+            <div class="tab-content active" data-tab="mindmap">
+                <div id="mindmap-container"></div>
+            </div>
+            
+            <div class="tab-content" data-tab="data">
+                <h3>思维导图数据结构</h3>
+                <div class="data-viewer">
+                    <pre id="dataViewer"></pre>
+                </div>
+                <div class="data-editor">
+                    <textarea id="dataEditor" rows="10"></textarea>
+                    <button id="applyDataBtn" class="btn">应用更改</button>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab="api">
+                <h3>API测试</h3>
+                <div class="api-test">
+                    <div class="input-group">
+                        <label for="apiUrlInput">API地址:</label>
+                        <input type="text" id="apiUrlInput" value="http://localhost:3000/api/mindmap/generate">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="apiTopicInput">主题:</label>
+                        <input type="text" id="apiTopicInput" value="中国传统文化">
+                    </div>
+                    
+                    <button id="callApiBtn" class="btn primary">调用API</button>
+                    
+                    <div class="response-container">
+                        <h4>API响应:</h4>
+                        <pre id="apiResponse">尚未调用API</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <span id="status">准备就绪</span>
+        </div>
+    </div>
+
+    <!-- 引入测试脚本 -->
+    <script src="js/mindmap-test.js"></script>
+</body>
+</html> 

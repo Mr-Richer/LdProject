@@ -13,8 +13,29 @@ async function bootstrap() {
   app.setGlobalPrefix(process.env.API_PREFIX || '/api');
   
   // 配置CORS，允许前端访问
+  const allowedOrigins = process.env.ALLOWED_ORIGINS ? 
+    process.env.ALLOWED_ORIGINS.split(',') : 
+    [process.env.FRONTEND_URL || 'http://localhost:80', 'http://localhost', 'http://localhost:80'];
+  
   app.enableCors({
-    origin: '*',  // 在生产环境中应该限制为特定域名
+    origin: (origin, callback) => {
+      // 允许没有origin的请求（如移动应用或Postman）
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // 检查origin是否在允许的列表中
+      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      
+      // 在开发环境中允许所有域名访问
+      if (process.env.NODE_ENV === 'development') {
+        return callback(null, true);
+      }
+      
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

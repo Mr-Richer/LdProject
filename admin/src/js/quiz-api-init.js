@@ -8,7 +8,8 @@ window.API_INITIALIZED = false;
 
 // 确保API_BASE_URL已定义
 if (!window.API_BASE_URL) {
-    window.API_BASE_URL = 'http://localhost:3000';
+    // 从APP_CONFIG获取API_BASE_URL
+    window.API_BASE_URL = window.APP_CONFIG ? window.APP_CONFIG.API_BASE_URL : window.location.origin;
 }
 
 // 初始化Quiz API

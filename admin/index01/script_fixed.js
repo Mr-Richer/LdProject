@@ -672,6 +672,14 @@ function initTeachingAssistant() {
                 return;
             }
             
+            // 检查按钮是否在知识拓展区域
+            const knowledgeContent = this.closest('#knowledge-content');
+            if (knowledgeContent) {
+                // 知识拓展区域的按钮由initKnowledgeExpansion函数处理
+                // 这里不做处理，避免冲突
+                return;
+            }
+            
             // 其他区域的生成按钮使用原来的逻辑
             const assistantContainer = this.closest('.assistant-container');
             if (!assistantContainer) {
@@ -2040,20 +2048,49 @@ function initKnowledgeExpansion() {
         });
     });
     
-    // 生成按钮
-    const generateBtn = knowledgeContent.querySelector('.generate-btn');
+    // 生成按钮 - 获取所有可能的思维导图生成按钮
+    const generateBtn = knowledgeContent.querySelector('.generate-btn, .ai-generate-btn, #mindmap-generate-btn, #backup-generate-btn');
     
     if (generateBtn) {
-        generateBtn.addEventListener('click', function() {
+        // 移除可能已存在的事件监听器
+        const newGenerateBtn = generateBtn.cloneNode(true);
+        generateBtn.parentNode.replaceChild(newGenerateBtn, generateBtn);
+        
+        newGenerateBtn.addEventListener('click', function() {
             console.log('Generate knowledge expansion button clicked');
             showNotification('正在生成知识拓展...', 'info');
             
-            // 模拟生成过程
-            setTimeout(() => {
+            // 获取输入和结果容器
+            const promptInput = knowledgeContent.querySelector('.prompt-input.zh');
+            const resultContainer = knowledgeContent.querySelector('.result-content .mindmap-container');
                 const knowledgeResult = document.querySelector('.knowledge-result');
+            
+            if (!promptInput || !resultContainer) {
+                console.error('找不到提示输入框或思维导图容器元素', {
+                    promptInput: !!promptInput,
+                    resultContainer: !!resultContainer
+                });
+                showNotification('组件初始化失败，请刷新页面重试', 'error');
+                return;
+            }
+            
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                showNotification('请输入知识点提示词', 'warning');
+                return;
+            }
+            
+            // 显示结果区域
                 if (knowledgeResult) {
                     knowledgeResult.style.display = 'block';
-                    
+            }
+            
+            // 显示加载状态
+            resultContainer.innerHTML = '<div class="loading" style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><p>正在生成思维导图...</p></div>';
+            
+            // 模拟生成过程
+            setTimeout(() => {
+                if (knowledgeResult) {
                     // 添加动画效果
                     knowledgeResult.style.opacity = '0';
                     knowledgeResult.style.transform = 'translateY(20px)';
@@ -2062,6 +2099,9 @@ function initKnowledgeExpansion() {
                         knowledgeResult.style.opacity = '1';
                         knowledgeResult.style.transform = 'translateY(0)';
                         knowledgeResult.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        
+                        // 使用新的思维导图初始化函数
+                        initMindmap(resultContainer, prompt);
                         
                         // 显示知识拓展列表
                         const knowledgeExpansionList = document.querySelector('.knowledge-expansion-list');
@@ -2074,575 +2114,11 @@ function initKnowledgeExpansion() {
                 showNotification('知识拓展已生成', 'success');
             }, 1500);
         });
-    }
-} 
-
-/**
- * 刷新章节选择器
- */
-function refreshChapterSelector() {
-    console.log('刷新课前章节选择器');
-    
-    // 获取课前章节选择器
-    const chapterSelect = document.getElementById('chapter-select');
-    if (!chapterSelect) {
-        console.error('课前章节选择器元素未找到');
-        return;
-    }
-    
-    // 保存当前选中的值
-    const currentSelectedValue = chapterSelect.value;
-    
-    // 重新初始化课前章节选择器
-    initChapterSelector()
-        .then(() => {
-            // 如果之前有选中值，尝试恢复选择
-            if (currentSelectedValue) {
-                const options = Array.from(chapterSelect.options);
-                const matchingOption = options.find(option => 
-                    option.value === currentSelectedValue && 
-                    option.classList.contains(document.body.classList.contains('en-mode') ? 'en' : 'zh')
-                );
-                
-                if (matchingOption) {
-                    matchingOption.selected = true;
-                    // 手动触发一次change事件
-                    const event = new Event('change');
-                    chapterSelect.dispatchEvent(event);
-                }
-            }
-        });
-}
-
-/**
- * 刷新课中章节选择器
- */
-function refreshInClassChapterSelector() {
-    console.log('刷新课中章节选择器');
-                    
-    // 获取课中章节选择器
-    const inClassChapterSelect = document.getElementById('in-class-chapter-select');
-    if (!inClassChapterSelect) {
-        console.error('课中章节选择器元素未找到');
-        return;
-    }
-    
-    // 保存当前选中的值
-    const currentSelectedValue = inClassChapterSelect.value;
-                
-    // 重新初始化课中章节选择器
-    initInClassChapterSelector()
-        .then(() => {
-            // 如果之前有选中值，尝试恢复选择
-                if (currentSelectedValue) {
-                const options = Array.from(inClassChapterSelect.options);
-                const matchingOption = options.find(option => 
-                    option.value === currentSelectedValue && 
-                    option.classList.contains(document.body.classList.contains('en-mode') ? 'en' : 'zh')
-                );
-                
-                if (matchingOption) {
-                    matchingOption.selected = true;
-                    // 手动触发一次change事件
-                    const event = new Event('change');
-                    inClassChapterSelect.dispatchEvent(event);
-                }
-            }
-        });
-}
-
-/**
- * 刷新所有章节选择器
- */
-function refreshAllChapterSelectors() {
-    console.log('刷新所有章节选择器...');
-    
-    // 检查当前激活的界面
-    const activeSection = document.querySelector('.content-section.active');
-    if (!activeSection) {
-        console.warn('未找到活动界面，刷新所有选择器');
-        // 如果找不到活动界面，刷新所有选择器
-        refreshChapterSelector();
-        refreshInClassChapterSelector();
-        return;
-    }
-    
-    // 根据当前活动的界面选择性刷新
-    if (activeSection.id === 'ai-pre-section') {
-        // 如果当前是课前界面，只刷新课前选择器
-        console.log('当前在课前界面，只刷新课前选择器');
-        refreshChapterSelector();
-    } else if (activeSection.id === 'ai-in-section') {
-        // 如果当前是课中界面，只刷新课中选择器
-        console.log('当前在课中界面，只刷新课中选择器');
-        refreshInClassChapterSelector();
+        
+        console.log('思维导图生成按钮事件绑定完成');
             } else {
-        // 其他界面，刷新所有选择器
-        console.log('当前在其他界面，刷新所有选择器');
-        refreshChapterSelector();
-        refreshInClassChapterSelector();
+        console.error('找不到思维导图生成按钮');
     }
-    
-    // 刷新章节卡片列表
-    loadChapters();
-    
-    // 更新章节统计数据
-    updateChapterStats();
-}
-
-// 将函数挂载到window对象，使其可以作为全局函数访问
-window.refreshAllChapterSelectors = refreshAllChapterSelectors;
-window.refreshChapterSelector = refreshChapterSelector; // 为兼容现有代码保留此挂载
-window.initChapterSelector = initChapterSelector;
-window.initInClassChapterSelector = initInClassChapterSelector;
-
-// PreClass命名空间也保留，保持兼容性
-window.PreClass = window.PreClass || {};
-window.PreClass.refreshChapterSelector = refreshChapterSelector; 
-
-/**
- * 动态加载脚本
- * @param {string} url - 脚本URL
- * @returns {Promise} - 加载完成的Promise
- */
-function loadScript(url) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = url;
-        script.onload = () => {
-            console.log(`脚本加载成功: ${url}`);
-            resolve();
-        };
-        script.onerror = (error) => {
-            console.error(`脚本加载失败: ${url}`, error);
-            reject(new Error(`无法加载脚本: ${url}`));
-        };
-        document.head.appendChild(script);
-    });
-} 
-
-// 替换课件按钮初始化 - 修改为不使用动态导入
-function initReplaceButton(replaceBtn) {
-    if (replaceBtn) {
-        replaceBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // 阻止事件冒泡
-            console.log('Replace courseware button clicked');
-            
-            // 获取当前章节并加载其PPT
-            const chapterSelect = document.getElementById('chapter-select');
-            if (chapterSelect && chapterSelect.value) {
-                // 如果已加载PptLoader模块，使用它来加载PPT
-                if (window.PptLoader && typeof window.PptLoader.loadChapterPPT === 'function') {
-                    window.PptLoader.loadChapterPPT(chapterSelect.value);
-                    showNotification('正在重新加载章节PPT', 'info');
-                } else {
-                    console.error('PPT加载器未找到，无法加载章节PPT');
-                    // 如果模块未加载，退回到刷新iframe
-                    const pptistFrame = document.getElementById('pptistFrame');
-                    if (pptistFrame) {
-                        pptistFrame.src = pptistFrame.src;
-                        showNotification('已重新加载PPTist编辑器', 'info');
-                    }
-                }
-            } else {
-                // 如果没有选择章节，刷新PPTist iframe
-                const pptistFrame = document.getElementById('pptistFrame');
-                if (pptistFrame) {
-                    pptistFrame.src = pptistFrame.src;
-                    showNotification('已重新加载PPTist编辑器', 'info');
-                } else {
-                    showNotification('替换课件功能已触发', 'info');
-                }
-            }
-        });
-    }
-}
-
-/**
- * 初始化签到二维码按钮
- * 移除弹窗功能，仅保留按钮点击事件
- */
-function initQRCodeDisplay() {
-    // 查找签到二维码按钮
-    const qrcodeBtn = document.querySelector('.panel-btn:not(.group-action-btn)');
-    
-    // 如果找不到按钮，直接返回
-    if (!qrcodeBtn) {
-        console.warn('签到二维码按钮未找到');
-        return;
-    }
-    
-    // 为签到按钮添加点击事件处理程序
-    qrcodeBtn.addEventListener('click', function() {
-        showNotification('签到二维码功能已禁用', 'info');
-        console.log('签到二维码功能已禁用');
-    });
-}
-
-/**
- * 初始化课中章节选择器
- */
-function initInClassChapterSelector() {
-    const inClassChapterSelect = document.getElementById('in-class-chapter-select');
-    if (!inClassChapterSelect) {
-        console.error('课中界面章节选择器元素未找到');
-        return;
-    }
-    
-    console.log('开始初始化课中界面章节选择器...');
-    
-    // 显示加载中状态
-    inClassChapterSelect.innerHTML = '<option disabled selected class="zh">加载中...</option><option disabled selected class="en">Loading...</option>';
-    
-    // 获取章节数据
-    fetch(`${window.API_BASE_URL}/api/chapters`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(result => {
-            if (result.code === 200 && result.data && result.data.chapters && result.data.chapters.length > 0) {
-                // 清空现有选项
-                inClassChapterSelect.innerHTML = '';
-                
-                // 按章节编号排序
-                const sortedChapters = result.data.chapters.sort((a, b) => 
-                    a.chapter_number - b.chapter_number
-                );
-                
-                // 添加章节选项
-                sortedChapters.forEach(chapter => {
-                    // 添加中文选项
-                    const optionZh = document.createElement('option');
-                    optionZh.value = chapter.chapter_number;
-                    optionZh.textContent = `第${chapter.chapter_number}章：${chapter.title_zh || ''}`;
-                    optionZh.classList.add('zh');
-                    inClassChapterSelect.appendChild(optionZh);
-                    
-                    // 添加英文选项
-                    const optionEn = document.createElement('option');
-                    optionEn.value = chapter.chapter_number;
-                    optionEn.textContent = `Chapter ${chapter.chapter_number}: ${chapter.title_en || ''}`;
-                    optionEn.classList.add('en');
-                    inClassChapterSelect.appendChild(optionEn);
-                });
-                
-                console.log('课中界面章节选择器初始化完成');
-                
-                // 添加选择器变更事件
-                addInClassChapterSelectChangeEvent(inClassChapterSelect);
-                
-                // 选择第一个章节（如果没有预选）
-                if (document.body.classList.contains('en-mode')) {
-                    // 英文模式下选择第一个英文选项
-                    const firstEnOption = inClassChapterSelect.querySelector('option.en');
-                    if (firstEnOption) firstEnOption.selected = true;
-                } else {
-                    // 中文模式下选择第一个中文选项
-                    const firstZhOption = inClassChapterSelect.querySelector('option.zh');
-                    if (firstZhOption) firstZhOption.selected = true;
-                }
-                
-                // 触发change事件，初始化内容
-                const event = new Event('change');
-                inClassChapterSelect.dispatchEvent(event);
-            } else {
-                // 没有数据时显示提示
-                inClassChapterSelect.innerHTML = '<option disabled selected class="zh">暂无章节数据</option><option disabled selected class="en">No chapters available</option>';
-                console.error('未获取到章节数据');
-                showNotification('未能获取章节数据，请检查网络连接或联系管理员', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('获取章节数据出错:', error);
-            inClassChapterSelect.innerHTML = '<option disabled selected class="zh">获取数据失败</option><option disabled selected class="en">Failed to load data</option>';
-            showNotification('获取章节数据失败: ' + error.message, 'error');
-        });
-}
-
-/**
- * 为课中章节选择器添加变更事件
- * @param {HTMLSelectElement} inClassChapterSelect - 课中章节选择器元素
- */
-function addInClassChapterSelectChangeEvent(inClassChapterSelect) {
-    // 存储章节中英文名称的映射
-    const chapterTitles = {
-        zh: {},
-        en: {}
-    };
-    
-    // 处理所有章节选项，建立章节号与标题的映射
-    for (let i = 0; i < inClassChapterSelect.options.length; i++) {
-        const option = inClassChapterSelect.options[i];
-        const value = option.value;
-        
-        if (!value) continue;
-        
-        if (option.classList.contains('zh')) {
-            // 保存中文标题
-            chapterTitles.zh[value] = option.textContent;
-        } else if (option.classList.contains('en')) {
-            // 保存英文标题
-            chapterTitles.en[value] = option.textContent;
-        }
-    }
-    
-    // 移除现有的事件监听器（如果有的话）
-    inClassChapterSelect.removeEventListener('change', inClassChapterSelectChangeHandler);
-    
-    // 添加新的事件监听器
-    inClassChapterSelect.addEventListener('change', inClassChapterSelectChangeHandler);
-    
-    // 章节选择器变更事件处理函数
-    function inClassChapterSelectChangeHandler() {
-        const chapterNumber = this.value;
-        
-        if (!chapterNumber) return;
-        
-        // 根据当前语言模式获取标题
-        const lang = document.body.classList.contains('en-mode') ? 'en' : 'zh';
-        const chapterTitle = chapterTitles[lang][chapterNumber] || chapterTitles.zh[chapterNumber];
-        
-        // 如果不在课中界面，略过内容更新
-        const aiInSection = document.getElementById('ai-in-section');
-        if (!aiInSection || !aiInSection.classList.contains('active')) {
-            console.log('当前不在课中界面，略过内容更新');
-            
-            // 记录选择但不执行操作
-            console.log(`用户已选择章节 ${chapterNumber} (${chapterTitle})，但当前不在课中界面`);
-            
-            // 显示提示
-            showNotification('请先切换到课中界面再选择章节', 'warning');
-            return;
-        }
-        
-        // 更新界面显示
-        updateInClassContent(chapterNumber, chapterTitle, lang);
-        
-        // 显示通知
-        const message = lang === 'en' ? 
-            `Switched to ${chapterTitle}` : 
-            `已切换到${chapterTitle}`;
-        showNotification(message, 'info');
-    }
-}
-
-/**
- * 更新AI课中内容区域
- * @param {string} chapterNumber - 章节编号
- * @param {string} chapterTitle - 章节标题
- * @param {string} lang - 语言模式 ('zh'或'en')
- */
-function updateInClassContent(chapterNumber, chapterTitle, lang = 'zh') {
-    console.log(`正在更新课中界面的章节 ${chapterNumber} (${chapterTitle}) 内容, 语言: ${lang}`);
-    
-    // 如果当前不在课中界面，不执行更新操作
-    const aiInSection = document.getElementById('ai-in-section');
-    if (!aiInSection || !aiInSection.classList.contains('active')) {
-        console.log('当前不在课中界面，跳过更新课中内容');
-        return;
-    }
-    
-    // 更新课中界面的标题显示
-    const titleElements = aiInSection.querySelectorAll('.section-header h2');
-    if (titleElements.length > 0) {
-        titleElements.forEach(element => {
-            if (element.classList.contains('zh')) {
-                element.textContent = `章节教学: ${chapterTitle}`;
-            } else if (element.classList.contains('en')) {
-                // 注意这里使用英文标题
-                const englishTitle = lang === 'en' ? chapterTitle : `Chapter ${chapterNumber}`;
-                element.textContent = `Chapter Teaching: ${englishTitle}`;
-            }
-        });
-    }
-    
-    // 更新课中面板的章节信息
-    const classroomPanels = aiInSection.querySelectorAll('.classroom-panel');
-    if (classroomPanels.length > 0) {
-        classroomPanels.forEach(panel => {
-            const panelHeader = panel.querySelector('.panel-header h3');
-            if (panelHeader) {
-                // 添加章节信息到标题
-                const originalText = panelHeader.textContent.split(' - ')[0]; // 保留原始标题
-                if (panelHeader.classList.contains('zh')) {
-                    panelHeader.textContent = `${originalText} - ${chapterTitle}`;
-                } else if (panelHeader.classList.contains('en')) {
-                    const englishTitle = lang === 'en' ? chapterTitle : `Chapter ${chapterNumber}`;
-                    panelHeader.textContent = `${originalText} - ${englishTitle}`;
-                }
-            }
-            
-            // 更新面板内容的章节信息
-            const chapterInfoElements = panel.querySelectorAll('.chapter-info');
-            if (chapterInfoElements.length > 0) {
-                chapterInfoElements.forEach(element => {
-                    if (element.classList.contains('zh')) {
-                        element.textContent = `当前章节: ${chapterTitle}`;
-                    } else if (element.classList.contains('en')) {
-                        const englishTitle = lang === 'en' ? chapterTitle : `Chapter ${chapterNumber}`;
-                        element.textContent = `Current Chapter: ${englishTitle}`;
-                    }
-                });
-            }
-        });
-    }
-    
-    // 触发PPT加载 - 仅在课件展示面板活跃时
-    const slidesPanel = document.getElementById('slides-panel');
-    if (slidesPanel && slidesPanel.classList.contains('active')) {
-        console.log('课件展示面板处于活跃状态，尝试加载PPT');
-        // 使用新的加载函数
-        if (typeof loadChapterSlides === 'function') {
-            loadChapterSlides(chapterNumber);
-        } else {
-            console.error('找不到loadChapterSlides函数，无法加载PPT');
-        }
-    } else {
-        console.log('课件展示面板未激活，暂不加载PPT');
-    }
-    
-    // 触发一个自定义事件，通知其他组件课中章节已更改
-    const chapterChangeEvent = new CustomEvent('inClassChapterChanged', {
-        detail: {
-            chapterNumber: chapterNumber,
-            chapterTitle: chapterTitle,
-            language: lang
-        }
-    });
-    document.dispatchEvent(chapterChangeEvent);
-}
-
-/**
- * 初始化课中界面
- */
-function initAIInClass() {
-    console.log('正在初始化课中界面...');
-    
-    // 初始化控制面板切换
-    initClassroomControlPanel();
-    
-    // 确保加载PptLoader模块
-    loadPPTistServices().then(() => {
-        console.log('PptLoader模块加载完成');
-        initCoursePPTDisplay();
-    }).catch(error => {
-        console.error('加载PptLoader模块失败:', error);
-        // 即使PptLoader加载失败，仍然初始化课件展示以便显示演示内容
-        initCoursePPTDisplay();
-    });
-}
-
-/**
- * 初始化课件PPT展示
- */
-function initCoursePPTDisplay() {
-    const slidePreview = document.getElementById('slide-preview');
-    if (!slidePreview) {
-        console.error('未找到幻灯片预览容器，无法初始化课件展示');
-        return;
-    }
-    
-    // 清除原有内容
-    slidePreview.innerHTML = '';
-    
-    console.log('正在初始化课中PPT显示组件...');
-    
-    // 创建iframe
-    const iframe = document.createElement('iframe');
-    iframe.id = 'inClassPptFrame';
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.style.border = 'none';
-    iframe.allowFullscreen = true;
-    
-    // 添加到容器
-    slidePreview.appendChild(iframe);
-    
-    // 设置iframe源 - 使用课前编辑器相同的源
-    const iframeSrc = 'http://localhost:5173/?mode=static&embed=true';
-    console.log('设置PPT iframe源:', iframeSrc);
-    iframe.src = iframeSrc;
-    
-    // 添加iframe加载事件
-    iframe.onload = function() {
-        console.log('PPT iframe加载完成，初始化PPT显示');
-        
-        // 添加跨窗口通信事件监听
-        window.addEventListener('message', function(event) {
-            // 检查消息来源
-            if (event.source !== iframe.contentWindow) return;
-            
-            const message = event.data;
-            console.log('收到PPT iframe消息:', message);
-            
-            // 处理来自iframe的消息
-            if (message && message.type) {
-                switch (message.type) {
-                    case 'ppt-loaded':
-                        console.log('PPT加载完成通知');
-                        // 可以更新UI或状态
-                        updateSlideIndicator(message.currentSlide, message.totalSlides, false);
-                        break;
-                    
-                    case 'slide-change':
-                        console.log(`幻灯片切换: ${message.currentSlide}/${message.totalSlides}`);
-                        // 更新幻灯片指示器
-                        updateSlideIndicator(message.currentSlide, message.totalSlides, false);
-                        break;
-                    
-                    case 'ppt-error':
-                        console.error('PPT错误:', message.error);
-                        showNotification('PPT加载出错: ' + message.error, 'error');
-                        break;
-                }
-            }
-        });
-        
-        // 延迟初始化，确保课中章节选择器已加载
-        setTimeout(function() {
-            // 获取当前选中的章节
-            const chapterSelect = document.getElementById('in-class-chapter-select');
-            if (chapterSelect && chapterSelect.value) {
-                const selectedChapterId = chapterSelect.value;
-                console.log('课中初始化: 加载当前选中章节的PPT:', selectedChapterId);
-                loadChapterSlides(selectedChapterId);
-            } else {
-                console.log('课中初始化: 没有找到章节选择器或未选中章节');
-            }
-            
-            // 添加章节选择变更事件
-            if (chapterSelect) {
-                console.log('为课中章节选择器添加事件监听器');
-                // 移除已有的事件监听器(如果有)
-                chapterSelect.removeEventListener('change', handleChapterSelectChange);
-                // 添加新的事件监听器
-                chapterSelect.addEventListener('change', handleChapterSelectChange);
-            }
-        }, 500);
-    };
-    
-    // iframe加载错误处理
-    iframe.onerror = function(error) {
-        console.error('PPT iframe加载失败:', error);
-        slidePreview.innerHTML = '<div class="ppt-error">PPT显示组件加载失败</div>';
-    };
-}
-
-/**
- * 处理章节选择变更事件
- * @param {Event} event - 变更事件
- */
-function handleChapterSelectChange(event) {
-    const chapterId = event.target.value;
-    if (!chapterId) return;
-    
-    console.log(`章节选择变更为: ${chapterId}`);
-    
-    // 加载对应章节的PPT
-    loadChapterSlides(chapterId);
 }
 
 /**
@@ -3268,4 +2744,385 @@ function showNotification(message, type = 'info', duration = 3000) {
             }
         }, 300);
     }, duration);
+}
+
+/**
+ * 初始化并加载思维导图功能
+ * @param {HTMLElement} container - 思维导图容器元素
+ * @param {String} topic - 思维导图主题
+ */
+function initMindmap(container, topic) {
+    console.log('初始化思维导图', { container, topic });
+    
+    // 如果已经加载过，则清空容器
+    if (container) {
+        // 检查是否已经有图表实例
+        if (container._echartsInstance) {
+            container._echartsInstance.dispose();
+        }
+        // 清空容器
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+    } else {
+        console.error('思维导图容器不存在');
+        return;
+    }
+    
+    // 加载ECharts库
+    if (typeof echarts === 'undefined') {
+        // 动态加载echarts
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.3.3/dist/echarts.min.js';
+        script.onload = function() {
+            console.log('ECharts库加载成功');
+            createMindmap(container, topic);
+        };
+        script.onerror = function() {
+            console.error('ECharts库加载失败');
+            container.innerHTML = '<div class="error-message" style="text-align:center; padding:20px; color:red;">加载思维导图组件失败，请检查网络连接</div>';
+        };
+        document.head.appendChild(script);
+    } else {
+        // 直接创建思维导图
+        createMindmap(container, topic);
+    }
+}
+
+/**
+ * 创建思维导图
+ * @param {HTMLElement} container - 思维导图容器元素
+ * @param {String} topic - 思维导图主题
+ */
+function createMindmap(container, topic) {
+    try {
+        // 显示加载指示器
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'mindmap-loading';
+        loadingDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>正在生成思维导图...</span>';
+        container.appendChild(loadingDiv);
+        
+        // 创建echarts实例
+        const chart = echarts.init(container);
+        // 保存实例引用，以便后续清理
+        container._echartsInstance = chart;
+        
+        // 使用generateMindmapData获取数据
+        generateMindmapData(topic)
+            .then(echartsData => {
+                // 隐藏加载指示器
+                if (container.contains(loadingDiv)) {
+                    container.removeChild(loadingDiv);
+                }
+                
+                // 配置项
+                const option = {
+                    title: {
+                        text: '知识拓展思维导图',
+                        subtext: topic,
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        triggerOn: 'mousemove'
+                    },
+                    toolbox: {
+                        show: true,
+                        feature: {
+                            saveAsImage: {
+                                title: '保存为图片'
+                            },
+                            restore: {
+                                title: '还原'
+                            },
+                            dataView: {
+                                title: '数据视图'
+                            }
+                        }
+                    },
+                    series: [
+                        {
+                            type: 'tree',
+                            data: [echartsData],
+                            top: '10%',
+                            left: '10%',
+                            bottom: '10%',
+                            right: '10%',
+                            symbolSize: 12,
+                            label: {
+                                position: 'left',
+                                verticalAlign: 'middle',
+                                align: 'right',
+                                fontSize: 14,
+                                color: '#333'
+                            },
+                            leaves: {
+                                label: {
+                                    position: 'right',
+                                    verticalAlign: 'middle',
+                                    align: 'left'
+                                }
+                            },
+                            expandAndCollapse: true,
+                            animationDuration: 550,
+                            animationDurationUpdate: 750,
+                            initialTreeDepth: 3,
+                            lineStyle: {
+                                color: '#999',
+                                width: 1.5,
+                                curveness: 0.5
+                            },
+                            itemStyle: {
+                                color: '#4a86e8',
+                                borderColor: '#2f5597'
+                            }
+                        }
+                    ]
+                };
+                
+                // 设置配置项
+                chart.setOption(option);
+                console.log('思维导图创建成功');
+                
+                // 添加窗口尺寸变化的监听器
+                window.addEventListener('resize', function() {
+                    chart.resize();
+                });
+                
+                // 显示生成成功的通知
+                showNotification('思维导图生成成功', 'success');
+            })
+            .catch(error => {
+                // 移除加载指示器
+                if (container.contains(loadingDiv)) {
+                    container.removeChild(loadingDiv);
+                }
+                
+                // 显示错误消息
+                console.error('思维导图创建失败:', error);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'mindmap-error';
+                errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>生成失败: ${error.message}</span>`;
+                container.appendChild(errorDiv);
+                
+                // 显示错误通知
+                showNotification(`思维导图生成失败: ${error.message}`, 'error');
+            });
+    } catch (error) {
+        console.error('思维导图创建过程中发生错误:', error);
+        showNotification(`创建思维导图时发生错误: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * 生成思维导图数据
+ * @param {String} topic - 主题
+ * @returns {Promise} - 返回Promise对象
+ */
+function generateMindmapData(topic) {
+    // 如果未提供主题，使用默认主题
+    if (!topic || topic.trim() === '') {
+        topic = '中国传统文化';
+    }
+    
+    // 返回Promise以支持异步生成
+    return new Promise((resolve, reject) => {
+        console.log(`使用AI生成思维导图数据，主题: "${topic}"`);
+        
+        // 显示通知
+        if (typeof showNotification === 'function') {
+            showNotification('正在使用AI生成思维导图...', 'info');
+        }
+        
+        // 构建请求参数
+        const requestData = {
+            topic: topic,
+            depth: 3, // 设置最大层级
+            language: 'zh' // 默认中文
+        };
+        
+        // 调用API生成
+        fetch(`${window.API_BASE_URL || 'http://localhost:3000'}/api/api/generate-mindmap`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('思维导图API响应:', data);
+            if (data && data.code === 200 && data.data) {
+                resolve(data.data);
+            } else {
+                // 如果API返回格式不符合预期，抛出错误
+                const errorMsg = data.message || '返回数据格式不正确';
+                throw new Error(errorMsg);
+            }
+        })
+        .catch(error => {
+            console.error('生成思维导图失败:', error);
+            if (typeof showNotification === 'function') {
+                showNotification(`生成失败: ${error.message}`, 'error');
+            }
+            
+            // 创建一个简单的错误节点作为备用
+            const fallbackData = {
+                name: topic,
+                children: [
+                    { name: '生成失败', children: [{ name: error.message }] }
+                ]
+            };
+            resolve(fallbackData);
+        });
+    });
+}
+
+// 将函数挂载到全局，使其可在控制台调试
+window.initMindmap = initMindmap;
+window.createMindmap = createMindmap;
+window.generateMindmapData = generateMindmapData;
+
+// 页面加载完成后初始化所有功能
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM内容加载完成，开始初始化...');
+    
+    // 初始化基础功能
+    initNavigation();
+    initLanguageToggle();
+    initTabSwitching();
+    initNotifications();
+    updateCurrentDate();
+    
+    // 初始化各模块
+    initTeachingAssistant();
+    initKnowledgeExpansion();
+    initKnowledgeExtraction();
+    initAIPreTabs();
+    initAIPre();
+    
+    // 初始化章节相关功能
+    initChapterCards();
+    updateChapterProgress();
+    loadChapters();
+    updateChapterStats();
+    initChapterNavButtons();
+    initChapterSelector();
+    initReplaceButton(document.querySelector('.replace-btn'));
+    initQRCodeDisplay();
+    
+    // 初始化备用的思维导图生成按钮
+    const backupGenerateBtn = document.getElementById('backup-generate-btn');
+    if (backupGenerateBtn) {
+        backupGenerateBtn.addEventListener('click', function() {
+            console.log('Backup generate button clicked');
+            const knowledgeContent = document.getElementById('knowledge-content');
+            const mainGenerateBtn = knowledgeContent.querySelector('.generate-btn, .ai-generate-btn, #mindmap-generate-btn');
+            if (mainGenerateBtn) {
+                mainGenerateBtn.click();
+            } else {
+                // 如果找不到主按钮，直接生成思维导图
+                const promptInput = knowledgeContent.querySelector('.prompt-input.zh');
+                const resultContainer = document.getElementById('mindmap-container');
+                const prompt = promptInput ? promptInput.value.trim() : '中国传统文化';
+                
+                if (resultContainer) {
+                    initMindmap(resultContainer, prompt);
+                    
+                    // 显示知识拓展列表
+                    const knowledgeExpansionList = document.querySelector('.knowledge-expansion-list');
+                    if (knowledgeExpansionList) {
+                        knowledgeExpansionList.style.display = 'block';
+                    }
+                    
+                    // 显示结果区域
+                    const knowledgeResult = document.querySelector('.knowledge-result');
+                    if (knowledgeResult) {
+                        knowledgeResult.style.display = 'block';
+                    }
+                }
+            }
+        });
+    }
+    
+    console.log('所有功能初始化完成');
+});
+
+// 添加错误处理逻辑，确保即使某些功能初始化失败也不会影响整体页面
+window.addEventListener('error', function(event) {
+    console.error('全局错误:', event.message, event.filename, event.lineno);
+    // 显示错误通知
+    if (typeof showNotification === 'function') {
+        showNotification('页面出现错误，请刷新重试', 'error');
+    }
+});
+
+/**
+ * 保存思维导图数据到数据库
+ * @param {Object} mindmapData - 思维导图数据
+ * @param {Number} chapterId - 章节ID
+ * @returns {Promise} - 返回Promise对象
+ */
+function saveMindmapData(mindmapData, chapterId) {
+    if (!mindmapData) {
+        showNotification('没有思维导图数据可保存', 'error');
+        return Promise.reject(new Error('没有思维导图数据可保存'));
+    }
+    
+    if (!chapterId) {
+        showNotification('请选择要关联的章节', 'warning');
+        return Promise.reject(new Error('请选择要关联的章节'));
+    }
+    
+    // 返回Promise以支持异步保存
+    return new Promise((resolve, reject) => {
+        console.log(`保存思维导图数据，关联章节ID: ${chapterId}`);
+        
+        // 显示通知
+        showNotification('正在保存思维导图...', 'info');
+        
+        // 构建请求参数
+        const requestData = {
+            data: mindmapData,
+            chapterId: parseInt(chapterId),
+            title: mindmapData.name ? `${mindmapData.name}思维导图` : '思维导图',
+            centralTopic: mindmapData.name || '中心主题'
+        };
+        
+        // 调用API保存
+        fetch(`${window.API_BASE_URL || 'http://localhost:3000'}/api/api/save-mindmap`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('思维导图保存响应:', data);
+            if (data && data.code === 200) {
+                showNotification('思维导图保存成功!', 'success');
+                resolve(data);
+            } else {
+                // 如果API返回格式不符合预期，抛出错误
+                const errorMsg = data.message || '返回数据格式不正确';
+                throw new Error(errorMsg);
+            }
+        })
+        .catch(error => {
+            console.error('保存思维导图失败:', error);
+            showNotification(`保存失败: ${error.message}`, 'error');
+            reject(error);
+        });
+    });
 }
