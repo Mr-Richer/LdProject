@@ -787,4 +787,36 @@ export class IdeologyCaseService {
       throw error;
     }
   }
+
+  async saveDiscussionBatch(topics: any[]): Promise<any> {
+    if (!Array.isArray(topics) || topics.length === 0) {
+      throw new BadRequestException('没有可保存的讨论题');
+    }
+    const connection = await this.databaseService.getConnection();
+    try {
+      await connection.beginTransaction();
+      for (const topic of topics) {
+        await connection.execute(
+          `INSERT INTO ideology_discussions 
+           (discussion_theme, content, chapter_id, user_id, discussion_type, is_ai_generated)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            topic.discussion_theme,
+            topic.content,
+            topic.chapter_id,
+            topic.user_id,
+            topic.discussion_type,
+            topic.is_ai_generated || 0
+          ]
+        );
+      }
+      await connection.commit();
+      return { success: true, message: '讨论题批量保存成功', count: topics.length };
+    } catch (e) {
+      await connection.rollback();
+      throw new BadRequestException('保存失败: ' + e.message);
+    } finally {
+      connection.release();
+    }
+  }
 }

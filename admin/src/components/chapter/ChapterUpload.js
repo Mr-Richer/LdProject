@@ -346,37 +346,15 @@ async function submitNewChapter() {
                 ppt_file: chapterData.ppt_file
             };
             
-            // 关闭模态框并重新加载章节列表
+            // 关闭模态框并重置表单
             document.getElementById('newChapterModal').classList.remove('active');
             form.reset();
             
             // 重置文件预览
             resetFilePreview();
             
-            // 刷新章节列表
-            if (typeof fetchChapters === 'function') {
-                await fetchChapters();
-            } else {
-                console.log('fetchChapters函数不可用，需要刷新页面获取最新数据');
-                // window.location.reload(); // 暂时注释掉，避免页面刷新打断用户操作
-            }
-            
-            // 刷新所有章节选择器
-            if (typeof window.refreshAllChapterSelectors === 'function') {
-                window.refreshAllChapterSelectors();
-            } else {
-                console.log('refreshAllChapterSelectors函数不可用，将使用单独的刷新方法');
-                
-                // 刷新课前章节选择器
-                if (typeof window.initChapterSelector === 'function') {
-                    window.initChapterSelector();
-                }
-                
-                // 尝试刷新课中章节选择器
-                if (typeof window.initInClassChapterSelector === 'function') {
-                    window.initInClassChapterSelector();
-                }
-            }
+            // 统一处理所有刷新操作
+            await refreshAllSelectors();
             
             // 等待章节加载和DOM更新完成后，滚动到最后一个章节
             setTimeout(() => {
@@ -479,12 +457,42 @@ function showNotification(type, messageZh, messageEn) {
 // 保存最后创建的章节信息
 let lastCreatedChapter = null;
 
+// 添加统一的刷新方法
+async function refreshAllSelectors() {
+    try {
+        // 1. 刷新章节卡片
+        if (typeof loadChapters === 'function') {
+            await loadChapters();
+        }
+
+        // 2. 更新章节统计数据
+        if (typeof updateChapterStats === 'function') {
+            updateChapterStats();
+        }
+
+        // 3. 刷新课前章节选择器
+        if (typeof initChapterSelector === 'function') {
+            await initChapterSelector();
+        }
+
+        // 4. 刷新课中章节选择器
+        if (typeof initInClassChapterSelector === 'function') {
+            await initInClassChapterSelector();
+        }
+
+        console.log('所有章节相关UI已刷新');
+    } catch (error) {
+        console.error('刷新章节相关UI时出错:', error);
+    }
+}
+
 // 暴露公共方法和变量
 window.ChapterUpload = {
     init: initChapterUpload,
     submitNewChapter: submitNewChapter,
     showNotification: showNotification,
-    getLastCreatedChapter: () => lastCreatedChapter  // 添加获取最后创建章节的方法
+    getLastCreatedChapter: () => lastCreatedChapter,
+    refreshAllSelectors: refreshAllSelectors  // 添加刷新方法到公共接口
 };
 
 // 在页面加载完成后初始化

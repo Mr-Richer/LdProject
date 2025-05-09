@@ -241,12 +241,22 @@
     display: none;
 }
 
-body.en .en {
+body.en-mode .en {
     display: block;
 }
 
-body.en .zh {
+body.en-mode .zh {
     display: none;
+}
+
+/* 确保非英文模式下不显示英文内容 */
+body:not(.en-mode) .en {
+    display: none !important;
+}
+
+/* 确保英文模式下不显示中文内容 */
+body.en-mode .zh {
+    display: none !important;
 }
 
 /* 响应式样式 */

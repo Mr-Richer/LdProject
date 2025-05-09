@@ -87,6 +87,21 @@ function initLanguageToggle() {
         
         // 保存语言偏好
         localStorage.setItem('preferred-language', newLang);
+        
+        // 触发语言更改事件
+        const langChangeEvent = new Event('langchange');
+        document.body.dispatchEvent(langChangeEvent);
+        
+        // 添加切换动画效果
+        const elements = document.querySelectorAll('.zh, .en');
+        elements.forEach(el => {
+            el.style.transition = 'opacity 0.3s ease';
+            el.style.opacity = '0';
+            
+            setTimeout(() => {
+                el.style.opacity = '1';
+            }, 300);
+        });
     });
 }
 

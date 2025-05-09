@@ -243,20 +243,118 @@
 /* PPTist容器样式 */
 .pptist-container {
     width: 100%;
-    height: calc(100vh - 220px);
-    min-height: 600px;
-    position: relative;
+    height: 700px;
     background-color: #f5f5f5;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    margin-bottom: 0;
 }
 
-#pptistFrame {
+/* 增加iframe高度样式 */
+#pptistFrame, #pptistClassFrame {
     width: 100%;
-    height: 100%;
+    height: 700px;
     border: none;
 } 
+
+.loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    width: 100%;
+    padding: 20px;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-indicator p {
+    margin: 5px 0;
+    font-size: 16px;
+    color: #555;
+}
+
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    width: 100%;
+    padding: 20px;
+    background-color: #fff8f8;
+    border-radius: 8px;
+    border: 1px solid #ffecec;
+}
+
+.error-state i {
+    font-size: 36px;
+    color: #e74c3c;
+    margin-bottom: 15px;
+}
+
+.error-state p {
+    margin: 5px 0;
+    font-size: 16px;
+    color: #555;
+    text-align: center;
+}
+
+/* 优化幻灯片显示区域样式 */
+.slide-preview {
+    width: 100%;
+    min-height: 700px;
+    position: relative;
+    overflow: hidden;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 0;
+}
+
+.slide-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+}
+
+.slide-controls {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 30px;
+    padding: 8px 15px;
+    z-index: 10;
+}
+
+.slide-counter {
+    color: white;
+    margin: 0 10px;
+    font-size: 14px;
+}
 
 /* 保存按钮高亮样式 */
 .result-action-btn.save-highlight {
@@ -288,4 +386,95 @@
     background-color: #f0f8ff;
     border-left: 4px solid #28a745;
     font-weight: bold;
+}
+
+/* 中英文语言切换的通用样式规则 */
+
+/* 中文元素默认显示 */
+.zh {
+    display: block !important;
+}
+
+/* 英文元素默认隐藏 */
+.en {
+    display: none !important;
+}
+
+/* 英文模式下英文元素显示 */
+body.en-mode .en {
+    display: block !important;
+}
+
+/* 英文模式下中文元素隐藏 */
+body.en-mode .zh {
+    display: none !important;
+}
+
+/* 针对行内元素的特殊处理 */
+span.zh, label.zh, button.zh, a.zh {
+    display: inline-block !important;
+}
+
+span.en, label.en, button.en, a.en {
+    display: none !important;
+}
+
+body.en-mode span.en, 
+body.en-mode label.en, 
+body.en-mode button.en, 
+body.en-mode a.en {
+    display: inline-block !important;
+}
+
+body.en-mode span.zh, 
+body.en-mode label.zh, 
+body.en-mode button.zh, 
+body.en-mode a.zh {
+    display: none !important;
+}
+
+/* 针对表格单元格的特殊处理 */
+td.zh, th.zh {
+    display: table-cell !important;
+}
+
+td.en, th.en {
+    display: none !important;
+}
+
+body.en-mode td.en, 
+body.en-mode th.en {
+    display: table-cell !important;
+}
+
+body.en-mode td.zh, 
+body.en-mode th.zh {
+    display: none !important;
+}
+
+/* 确保语言切换按钮正确显示 */
+.language-btn .lang-text {
+    display: inline-block;
+    transition: opacity 0.3s ease;
+}
+
+.language-btn .lang-text.zh {
+    display: inline-block !important;
+}
+
+.language-btn .lang-text.en {
+    display: none !important;
+}
+
+body.en-mode .language-btn .lang-text.en {
+    display: inline-block !important;
+}
+
+body.en-mode .language-btn .lang-text.zh {
+    display: none !important;
+}
+
+/* 调整slides-display区域样式 */
+.slides-display {
+    margin-bottom: 0;
 } 

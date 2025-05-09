@@ -85,6 +85,12 @@ export class IdeologyCaseController {
     return this.ideologyCaseService.generateDiscussions(generateTopicsDto);
   }
 
+  @Post('discussion/save-batch')
+  @ApiOperation({ summary: '批量保存讨论题' })
+  async saveDiscussionBatch(@Body() body: { topics: any[] }) {
+    return this.ideologyCaseService.saveDiscussionBatch(body.topics);
+  }
+
   @Get('case')
   @ApiOperation({ summary: '获取思政案例列表' })
   @ApiResponse({ status: 200, description: '成功获取列表' })

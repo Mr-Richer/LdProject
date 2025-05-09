@@ -195,6 +195,16 @@ function updateAIPreContent(chapterNumber, chapterTitle, lang = 'zh') {
     );
 }
 
+// 添加语言切换事件监听
+document.body.addEventListener('langchange', function() {
+    const isEnglish = document.body.classList.contains('en-mode');
+    const currentChapter = document.querySelector('.current-chapter-info');
+    if (currentChapter) {
+        const chapterTitle = currentChapter.textContent.split(': ')[1];
+        updateAIPreContent(null, chapterTitle, isEnglish ? 'en' : 'zh');
+    }
+});
+
 // 初始化课件设计功能
 function initCoursewareDesign() {
     const newPPTBtn = document.getElementById('newPPTBtn');

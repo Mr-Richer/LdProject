@@ -12768,6 +12768,69 @@ body.en-mode .zh {
     transform: translateX(0);
 }
 
+/* 中英文语言切换样式规则 - 显示隐藏逻辑 */
+/* 中文元素默认显示 */
+.zh {
+    display: block !important;
+}
+
+/* 英文元素默认隐藏 */
+.en {
+    display: none !important;
+}
+
+/* 英文模式下英文元素显示 */
+body.en-mode .en {
+    display: block !important;
+}
+
+/* 英文模式下中文元素隐藏 */
+body.en-mode .zh {
+    display: none !important;
+}
+
+/* 针对行内元素的特殊处理 */
+span.zh, label.zh, button.zh, a.zh {
+    display: inline-block !important;
+}
+
+span.en, label.en, button.en, a.en {
+    display: none !important;
+}
+
+body.en-mode span.en, 
+body.en-mode label.en, 
+body.en-mode button.en, 
+body.en-mode a.en {
+    display: inline-block !important;
+}
+
+body.en-mode span.zh, 
+body.en-mode label.zh, 
+body.en-mode button.zh, 
+body.en-mode a.zh {
+    display: none !important;
+}
+
+/* 针对表格单元格的特殊处理 */
+td.zh, th.zh {
+    display: table-cell !important;
+}
+
+td.en, th.en {
+    display: none !important;
+}
+
+body.en-mode td.en, 
+body.en-mode th.en {
+    display: table-cell !important;
+}
+
+body.en-mode td.zh, 
+body.en-mode th.zh {
+    display: none !important;
+}
+
 /* 互动弹窗样式 */
 .interaction-modal {
     display: none;

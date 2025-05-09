@@ -1276,9 +1276,7 @@ function ensureControlButtons() {
         const addBtn = controlsDiv.querySelector('.btn-secondary:last-child');
         
         if (saveBtn) {
-            saveBtn.addEventListener('click', function() {
-                console.log('保存讨论题');
-            });
+            saveBtn.addEventListener('click', saveDiscussionTopics);
         }
         
         if (addBtn) {
@@ -2728,4 +2726,75 @@ function refreshCasesList(caseData, caseId) {
     } catch (error) {
         console.error('更新案例列表失败:', error);
     }
+}
+
+// 保存讨论题
+function saveDiscussionTopics() {
+    // 获取主题、类型、章节ID
+    const themeInput = document.querySelector('.discussion-generator .form-input:not([style*="display: none"])');
+    const typeSelect = document.querySelector('.discussion-generator .ideology-select');
+    const theme = themeInput ? themeInput.value.trim() : '';
+    const type = typeSelect ? typeSelect.value : 'basic';
+    const typeMapping = { basic: 1, critical: 2, creative: 3, applied: 4 };
+    const discussionType = typeMapping[type] || 1;
+    const chapterId = parseInt(window.currentChapterId, 10) || 1;
+    const userId = 1;
+
+    // 获取所有讨论题内容
+    const items = document.querySelectorAll('.discussion-item .discussion-content p.zh, .discussion-item .discussion-content textarea');
+    const topics = [];
+    items.forEach(item => {
+        const content = item.value ? item.value.trim() : item.textContent.trim();
+        if (content) {
+            topics.push({
+                discussion_theme: theme,
+                content,
+                chapter_id: chapterId,
+                user_id: userId,
+                discussion_type: discussionType,
+                is_ai_generated: 0
+            });
+        }
+    });
+
+    if (topics.length === 0) {
+        showToast('没有可保存的讨论题', 'warning');
+        return;
+    }
+
+    // 发送到后端
+    (async () => {
+        try {
+            const apiBaseUrl = window.API_BASE_URL || 'http://localhost:3000';
+            const response = await fetch(`${apiBaseUrl}/api/ideology/discussion/save-batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topics })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast('讨论题保存成功', 'success');
+            } else {
+                showToast('保存失败: ' + (result.message || '未知错误'), 'error');
+            }
+        } catch (e) {
+            showToast('保存失败: ' + e.message, 'error');
+        }
+    })();
+}
+
+// 监听语言切换事件，自动切换思政模块内所有中英文内容
+if (!window._ideologyLangListenerAdded) {
+    document.body.addEventListener('langchange', function() {
+        const isEnglish = document.body.classList.contains('en-mode');
+        // 切换思政模块内所有.zh/.en元素的显示
+        const ideologySections = document.querySelectorAll('.ideology-generation, .ideology-result, .ideology-cases-list, .discussion-generator, .discussion-result');
+        ideologySections.forEach(section => {
+            const zhEls = section.querySelectorAll('.zh');
+            const enEls = section.querySelectorAll('.en');
+            zhEls.forEach(el => { el.style.display = isEnglish ? 'none' : ''; });
+            enEls.forEach(el => { el.style.display = isEnglish ? '' : 'none'; });
+        });
+    });
+    window._ideologyLangListenerAdded = true;
 }

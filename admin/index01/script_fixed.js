@@ -277,6 +277,27 @@ function initNavigation() {
                 if (pageTitleZh && navTextZh) pageTitleZh.textContent = navTextZh.textContent;
                 if (pageTitleEn && navTextEn) pageTitleEn.textContent = navTextEn.textContent;
                 
+                // 初始化对应的功能模块
+                const sectionType = this.getAttribute('data-section');
+                if (sectionType === 'ai-in') {
+                    console.log('正在切换到课中界面，初始化课中相关功能...');
+                    // 确保initAIInClass函数存在
+                    if (typeof initAIInClass === 'function') {
+                        // 延迟一点点执行，确保DOM已经更新
+                        setTimeout(() => {
+                            initAIInClass();
+                            console.log('课中界面功能初始化完成');
+                        }, 100);
+                    } else {
+                        console.error('initAIInClass函数未定义，无法初始化课中界面功能');
+                    }
+                } else if (sectionType === 'ai-pre') {
+                    // 初始化课前功能
+                    if (typeof initAIPre === 'function') {
+                        initAIPre();
+                    }
+                }
+                
                 // 添加动态效果
                 animateContentChange(targetSection);
                 
@@ -298,23 +319,83 @@ function initNavigation() {
 function initLanguageToggle() {
     const langToggle = document.getElementById('langToggle');
     
-    langToggle.addEventListener('click', function() {
-        document.body.classList.toggle('en-mode');
+    if (!langToggle) {
+        console.error('语言切换按钮未找到');
+        return;
+    }
+    
+    console.log('初始化语言切换功能');
+    
+    // 移除之前可能存在的事件监听器
+    const newLangToggle = langToggle.cloneNode(true);
+    langToggle.parentNode.replaceChild(newLangToggle, langToggle);
+    
+    newLangToggle.addEventListener('click', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
         
-        // 触发语言更改事件，供其他需要响应语言变化的组件使用
-        const langChangeEvent = new Event('langchange');
-        document.body.dispatchEvent(langChangeEvent);
+        // 切换en-mode类名
+        const isEnMode = document.body.classList.contains('en-mode');
         
-        // 添加切换动画效果
-        const elements = document.querySelectorAll('.zh, .en');
-        elements.forEach(el => {
-            el.style.transition = 'opacity 0.3s ease';
-            el.style.opacity = '0';
-            
-            setTimeout(() => {
-                el.style.opacity = '1';
-            }, 300);
+        // 如果当前是英文模式，切换到中文模式，反之亦然
+        if (isEnMode) {
+            document.body.classList.remove('en-mode');
+            document.documentElement.setAttribute('lang', 'zh');
+            console.log('已切换到中文模式');
+        } else {
+            document.body.classList.add('en-mode');
+            document.documentElement.setAttribute('lang', 'en');
+            console.log('已切换到英文模式');
+        }
+        
+        // 触发自定义事件通知其他脚本
+        const langChangeEvent = new CustomEvent('langchange', { 
+            detail: { language: isEnMode ? 'zh' : 'en' } 
         });
+        document.dispatchEvent(langChangeEvent);
+        
+        // 显示切换通知
+        const notificationMessage = isEnMode ? '已切换到中文模式' : 'Switched to English';
+        if (typeof showNotification === 'function') {
+            showNotification(notificationMessage, 'info');
+        }
+        
+        // 更新iframe内容（如果存在）
+        updateIframeLanguage(isEnMode ? 'zh' : 'en');
+        
+        // 强制触发DOM更新
+        setTimeout(function() {
+            window.dispatchEvent(new Event('resize'));
+        }, 100);
+        
+        return false;
+    });
+}
+
+/**
+ * 更新iframe内容语言
+ * @param {string} language - 语言代码，'zh' 或 'en'
+ */
+function updateIframeLanguage(language) {
+    // 更新PPTist iframe语言
+    const pptistFrames = [
+        document.getElementById('pptistFrame'),
+        document.getElementById('pptistClassFrame')
+    ];
+    
+    pptistFrames.forEach(frame => {
+        if (frame && frame.contentWindow) {
+            try {
+                frame.contentWindow.postMessage({
+                    type: 'pptist-command',
+                    action: 'change-language',
+                    language: language
+                }, '*');
+                console.log(`已向PPTist发送语言切换消息: ${language}`);
+            } catch (error) {
+                console.error('向PPTist发送语言切换消息失败:', error);
+            }
+        }
     });
 }
 
@@ -328,10 +409,16 @@ function initChapterModal() {
     const cancelBtns = modal.querySelectorAll('.btn-cancel');
     const confirmBtns = modal.querySelectorAll('.btn-confirm');
     
+    // 防止重复绑定事件
+    if (modal.dataset.initialized === 'true') {
+        return;
+    }
+    modal.dataset.initialized = 'true';
+    
     // 打开模态框
     openBtn.addEventListener('click', () => {
         modal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // 防止背景滚动
+        document.body.style.overflow = 'hidden';
     });
     
     // 关闭模态框的多种方式
@@ -344,12 +431,6 @@ function initChapterModal() {
         form.querySelectorAll('input[type="text"], textarea').forEach(input => {
             input.value = '';
         });
-        
-        // 重置图片预览
-        const filePreview = modal.querySelector('.file-preview');
-        if (filePreview) {
-            filePreview.innerHTML = '';
-        }
     }
     
     closeBtn.addEventListener('click', closeModal);
@@ -365,13 +446,15 @@ function initChapterModal() {
         }
     });
     
-    // 确认按钮 - 使用ChapterUpload组件的方法而不是自己实现
+    // 确认按钮 - 使用ChapterUpload组件的方法
     confirmBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
-            // 检查是否有ChapterUpload组件
-            if (window.ChapterUpload && typeof window.ChapterUpload.submitNewChapter === 'function') {
-                // 使用ChapterUpload组件的方法提交表单
-                console.log('使用ChapterUpload组件提交表单');
+            if (!window.ChapterUpload || typeof window.ChapterUpload.submitNewChapter !== 'function') {
+                console.error('ChapterUpload组件未加载或submitNewChapter方法不可用');
+                showNotification('系统错误：章节创建组件未加载', 'error');
+                return;
+            }
+
             try {
                 // 显示加载状态
                     const originalBtnText = btn.innerHTML;
@@ -385,40 +468,12 @@ function initChapterModal() {
                 closeModal();
                 
                     // 获取创建的章节编号
-                    let newChapterNumber = null;
-                    if (window.ChapterUpload && window.ChapterUpload.getLastCreatedChapter) {
-                        newChapterNumber = window.ChapterUpload.getLastCreatedChapter().chapter_number;
-                    } else {
-                        // 如果没有获取方法，尝试从表单获取
-                        const chapterNumberInput = modal.querySelector('input[name="chapter_number"]');
-                        if (chapterNumberInput) {
-                            newChapterNumber = chapterNumberInput.value;
-                        }
-                    }
-                
-                    // 重新加载章节列表并滚动到新创建的章节
-                    if (newChapterNumber) {
-                        await loadChaptersAndScrollToNew(newChapterNumber);
-                    } else {
-                        // 如果无法获取章节编号，回退到普通加载
-                        await loadChapters();
-                    }
-                
-                // 更新章节统计数据
-                updateChapterStats();
-                
-                    // 刷新课前章节选择器
-                    if (window.PreClass && typeof window.PreClass.refreshChapterSelector === 'function') {
-                        // 使用短延迟，确保章节创建完全完成后再刷新选择器
-                        setTimeout(() => {
-                            window.PreClass.refreshChapterSelector();
-                            console.log('已刷新课前章节选择器');
-                        }, 300);
-                    }
-                    
-                    // 刷新所有章节选择器
+                const newChapter = window.ChapterUpload.getLastCreatedChapter();
+                if (newChapter) {
+                    // 只调用一次刷新，让ChapterUpload组件处理所有必要的更新
                     if (typeof window.ChapterUpload.refreshAllSelectors === 'function') {
                         window.ChapterUpload.refreshAllSelectors();
+                    }
                     }
             } catch (error) {
                 console.error('保存章节时出错:', error);
@@ -426,12 +481,7 @@ function initChapterModal() {
             } finally {
                 // 恢复按钮状态
                 btn.disabled = false;
-                btn.innerHTML = '<span class="zh">保存</span><span class="en">Save</span>';
-                }
-            } else {
-                // ChapterUpload组件不可用，显示错误
-                console.error('ChapterUpload组件未加载或submitNewChapter方法不可用');
-                showNotification('系统错误：章节创建组件未加载', 'error');
+                btn.innerHTML = originalBtnText;
             }
         });
     });
@@ -1570,22 +1620,44 @@ function initInClassChapterSelector() {
                     // 移除现有事件监听器，避免重复绑定
                     inClassChapterSelect.removeEventListener('change', window._inClassChapterSelectChangeHandler);
                     
-                    // 添加选择器变更事件
+                    // 添加新的事件处理函数
                     window._inClassChapterSelectChangeHandler = function() {
-                        addInClassChapterSelectChangeEvent(inClassChapterSelect);
+                        const chapterId = this.value;
+                        if (!chapterId) return;
+                    
+                        // 获取当前语言
+                        const lang = document.body.classList.contains('en-mode') ? 'en' : 'zh';
+                        
+                        // 获取章节标题
+                        const selectedOption = Array.from(this.options).find(option => 
+                            option.value === chapterId && option.classList.contains(lang)
+                        );
+                        
+                        const chapterTitle = selectedOption ? selectedOption.textContent : `第${chapterId}章`;
+                        
+                        console.log(`选择了章节: ${chapterId}, 标题: ${chapterTitle}`);
+                        
+                        // 加载PPT - 新的loadChapterPPT函数只需要章节ID
+                        if (typeof window.loadChapterPPT === 'function') {
+                            window.loadChapterPPT(chapterId);
+                            
+                            // 切换到课件展示面板
+                            const slidesPanelControlItem = document.querySelector('.control-item[data-section="slides"]');
+                            if (slidesPanelControlItem) {
+                                slidesPanelControlItem.click();
+                            }
+                            
+                            // 显示通知
+                            showNotification(`正在加载第${chapterId}章PPT课件`, 'info');
+                        } else {
+                            console.error('loadChapterPPT函数未定义，无法加载PPT');
+                            showNotification('PPT加载功能未就绪，请刷新页面重试', 'error');
+                    }
                     };
                     
                     inClassChapterSelect.addEventListener('change', window._inClassChapterSelectChangeHandler);
                     
-                    // 选择第一个章节（如果没有预选）
-                    const currentLang = document.body.classList.contains('en-mode') ? 'en' : 'zh';
-                    if (inClassChapterSelect.selectedIndex === -1) {
-                        const firstOption = inClassChapterSelect.querySelector(`option.${currentLang}`);
-                        if (firstOption) firstOption.selected = true;
-                    }
-                    
-                    // 不触发change事件，让用户主动选择才加载PPT
-                    // 这与课前的行为不同，是为了避免自动加载大型PPT文件
+                    // 不自动选择第一个章节，让用户主动选择
                     
                     resolve(true);
                 } else {
@@ -2083,70 +2155,30 @@ function loadScript(src) {
     });
 } 
 
-// 页面初始化
-document.addEventListener('DOMContentLoaded', async function() {
-    // 检测并解决冲突的脚本
-    checkForConflictingScripts();
+// 页面初始化函数
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('初始化页面...');
     
-    // 设置API基础URL
-    window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3000';
+    // 确保initLanguageToggle函数被调用
+    initLanguageToggle();
     
-    // 确保API已准备好
-    await ensureApiReady();
-    
-    // 如果不是单页的小工具，初始化导航
-    if (!window.isWidget) {
+    // 初始化导航
         initNavigation();
-    }
+    
+    // 初始化章节创建模态框
+    initChapterModal();
     
     // 初始化日期显示
     updateCurrentDate();
     
-    // 初始化语言切换
-    initLanguageToggle();
-    
-    // 初始化各个功能模块
-    initChapterModal();
-    initChapterCards();
-    initTabSwitching();
+    // 初始化通知系统
     initNotifications();
-    initTeachingAssistant();
-    initChapterNavButtons();
-    initChapterSelector();
-    initAIPreTabs();
-    initAIPre();
-    initCoursewareDesign();
-    initContentGenerateModal();
-    initKnowledgeExtraction();
     
-    // 加载章节
+    // 加载章节数据
     loadChapters();
     
-    // 初始化章节选择器
-    initChapterSelector();
-    
-    // 为章节选择器添加事件，当章节变化时重新加载列表
-    const chapterSelect = document.querySelector('#chapter-select');
-    if (chapterSelect) {
-        // 添加章节切换事件，避免重复监听
-        if (!chapterSelect.hasAttribute('data-change-handler-added')) {
-            chapterSelect.addEventListener('change', function() {
-                const selectedChapterId = this.value;
-                if (selectedChapterId) {
-                    const knowledgeContent = document.getElementById('knowledge-content');
-                    if (knowledgeContent) {
-                        knowledgeContent.setAttribute('data-chapter-id', selectedChapterId);
-                    }
-                    
-                    // 使用知识拓展模块加载思维导图列表
-                    if (window.KnowledgeExpansion && typeof window.KnowledgeExpansion.loadKnowledgeExpansions === 'function') {
-                        window.KnowledgeExpansion.loadKnowledgeExpansions(selectedChapterId);
-                    }
-                }
-            });
-            chapterSelect.setAttribute('data-change-handler-added', 'true');
-        }
-    }
+    // 初始化章节导航按钮
+    initChapterNavButtons();
     
     console.log('页面初始化完成');
 });
@@ -2341,3 +2373,439 @@ function initIdeologyModule() {
 // function initDiscussionTopicGenerator() { ... }
 // function handleGenerateDiscussion() { ... }
 // function generateDiscussionTopics(theme, count, type) { ... }
+
+/**
+ * 初始化课堂面板切换
+ * 处理课中界面中不同面板之间的切换
+ */
+function initClassroomPanels() {
+    console.log('初始化课中面板切换...');
+    
+    // 获取控制项和面板
+    const controlItems = document.querySelectorAll('.classroom-controls .control-item');
+    const classroomPanels = document.querySelectorAll('.classroom-panel');
+    
+    if (!controlItems.length || !classroomPanels.length) {
+        console.error('找不到课堂控制项或面板元素');
+        return;
+    }
+    
+    // 为每个控制项添加点击事件
+    controlItems.forEach((item, index) => {
+        item.addEventListener('click', function() {
+            // 移除所有控制项的活动状态
+            controlItems.forEach(i => i.classList.remove('active'));
+            
+            // 为当前点击的控制项添加活动状态
+            this.classList.add('active');
+            
+            // 隐藏所有面板
+            classroomPanels.forEach(panel => panel.classList.remove('active'));
+            
+            // 显示对应的面板
+            if (classroomPanels[index]) {
+                classroomPanels[index].classList.add('active');
+                console.log(`切换到面板: ${index + 1}`);
+            }
+        });
+    });
+    
+    console.log('课中面板切换初始化完成');
+}
+
+/**
+ * 初始化AI助教-课中部分
+ */
+function initAIInClass() {
+    console.log('初始化课中界面...');
+    
+    // 初始化课堂控制面板
+    initClassroomControlPanel();
+    
+    // 初始化课中章节选择器
+    initInClassChapterSelector();
+    
+    // 初始化课中面板切换
+    initClassroomPanels();
+    
+    // 初始化签到二维码按钮
+    initQRCodeDisplay();
+    
+    // 初始化课件展示功能
+    initPPTistPlayer();
+}
+
+/**
+ * 初始化签到二维码显示功能
+ */
+function initQRCodeDisplay() {
+    const qrCodeBtn = document.querySelector('.panel-btn:nth-child(1)');
+    if (!qrCodeBtn) return;
+    
+    qrCodeBtn.addEventListener('click', function() {
+        // 创建浮层显示二维码
+        const qrModal = document.createElement('div');
+        qrModal.className = 'qr-modal';
+        qrModal.innerHTML = `
+            <div class="qr-container">
+                <div class="qr-header">
+                    <h3 class="zh">课堂签到二维码</h3>
+                    <h3 class="en">Class Check-in QR Code</h3>
+                    <button class="close-btn"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="qr-content">
+                    <img src="../picture/default-qr.png" alt="签到二维码" class="qr-image">
+                    <p class="zh">请学生使用APP扫描二维码进行签到</p>
+                    <p class="en">Students scan QR code with the app to check in</p>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(qrModal);
+        
+        // 添加关闭事件
+        const closeBtn = qrModal.querySelector('.close-btn');
+        closeBtn.addEventListener('click', function() {
+            qrModal.classList.add('fade-out');
+            setTimeout(() => qrModal.remove(), 300);
+        });
+        
+        // 点击模态框外部关闭
+        qrModal.addEventListener('click', function(e) {
+            if (e.target === qrModal) {
+                qrModal.classList.add('fade-out');
+                setTimeout(() => qrModal.remove(), 300);
+            }
+        });
+        
+        // 显示动画
+        setTimeout(() => qrModal.classList.add('show'), 10);
+    });
+}
+
+/**
+ * 初始化PPTist播放器
+ * 为课中界面提供PPT播放功能
+ */
+function initPPTistPlayer() {
+    console.log('初始化PPT展示区域...');
+    
+    // 获取展示区域元素和PPTist iframe
+    const slidePreview = document.getElementById('slide-preview');
+    const pptistFrame = document.getElementById('pptistClassFrame');
+    const loadingIndicator = document.getElementById('pptist-loading');
+    const errorState = document.getElementById('pptist-error');
+    const retryButton = document.getElementById('retry-load-btn');
+    
+    if (!slidePreview || !pptistFrame) {
+        console.error('找不到幻灯片预览区域元素或PPTist iframe');
+        return;
+    }
+    
+    // 幻灯片状态
+    const slideState = {
+        currentSlide: 1,
+        totalSlides: 0,
+        isPlaying: false,
+        playInterval: null,
+        chapterId: null,  // 默认为空
+        chapterTitle: '',
+        pptLoaded: false
+    };
+    
+    // 绑定控制按钮事件
+    function bindControlEvents() {
+        const prevBtn = document.getElementById('prev-slide-btn');
+        const playBtn = document.getElementById('play-slides-btn');
+        const nextBtn = document.getElementById('next-slide-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        
+        // 上一张
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function() {
+                if (slideState.currentSlide > 1) {
+                    slideState.currentSlide--;
+                    goToSlide(slideState.currentSlide);
+                }
+            });
+        }
+        
+        // 播放/暂停
+        if (playBtn) {
+            playBtn.addEventListener('click', function() {
+                slideState.isPlaying = !slideState.isPlaying;
+                
+                if (slideState.isPlaying) {
+                    // 开始自动播放
+                    slideState.playInterval = setInterval(() => {
+                        if (slideState.currentSlide < slideState.totalSlides) {
+                            slideState.currentSlide++;
+                        } else {
+                            slideState.currentSlide = 1; // 循环播放
+                        }
+                        goToSlide(slideState.currentSlide);
+                    }, 3000);
+                    
+                    this.innerHTML = '<i class="fas fa-pause"></i>';
+                    this.title = '暂停';
+                } else {
+                    // 停止自动播放
+                    clearInterval(slideState.playInterval);
+                    this.innerHTML = '<i class="fas fa-play"></i>';
+                    this.title = '自动播放';
+                }
+            });
+        }
+        
+        // 下一张
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function() {
+                if (slideState.currentSlide < slideState.totalSlides) {
+                    slideState.currentSlide++;
+                    goToSlide(slideState.currentSlide);
+                }
+            });
+        }
+        
+        // 全屏
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', function() {
+                if (!document.fullscreenElement) {
+                    pptistFrame.requestFullscreen().catch(err => {
+                        console.error(`全屏切换出错: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+        }
+    }
+    
+    // 重试按钮绑定
+    if (retryButton) {
+        retryButton.addEventListener('click', function() {
+            if (slideState.chapterId) {
+                loadChapterPPT(slideState.chapterId);
+            }
+        });
+    }
+    
+    // iframe加载完成后初始化事件监听
+    pptistFrame.addEventListener('load', function() {
+        console.log('PPTist iframe已加载完成');
+        
+        // 添加消息监听
+        window.addEventListener('message', function(event) {
+            try {
+                // 检查消息源（实际生产环境应验证origin）
+                if (event.data && event.data.type === 'pptist-event') {
+                    console.log('收到PPTist事件消息:', event.data.action);
+                    
+                    // 处理初始化完成消息
+                    if (event.data.action === 'initialized') {
+                        console.log('PPTist初始化完成');
+                    }
+                    
+                    // 处理PPT加载成功消息
+                    if (event.data.action === 'ppt-loaded') {
+                        console.log('PPT加载成功');
+                        if (loadingIndicator) loadingIndicator.style.display = 'none';
+                        if (errorState) errorState.style.display = 'none';
+                        slideState.pptLoaded = true;
+                        
+                        // 更新幻灯片总数和当前幻灯片
+                        if (event.data.slideCount) {
+                            slideState.totalSlides = event.data.slideCount;
+                            updateSlideIndicator();
+                        }
+                    }
+                    
+                    // 处理当前幻灯片更改消息
+                    if (event.data.action === 'slide-change') {
+                        if (event.data.currentSlide) {
+                            slideState.currentSlide = event.data.currentSlide;
+                            updateSlideIndicator();
+                        }
+                    }
+                    
+                    // 处理PPT加载失败消息
+                    if (event.data.action === 'ppt-load-error') {
+                        console.error('PPT加载失败:', event.data.error);
+                        if (loadingIndicator) loadingIndicator.style.display = 'none';
+                        if (errorState) errorState.style.display = 'flex';
+                    }
+                }
+            } catch (error) {
+                console.error('处理PPTist消息出错:', error);
+            }
+        });
+        
+        // 发送ping消息
+        try {
+            pptistFrame.contentWindow.postMessage({
+                type: 'ping'
+            }, '*');
+            console.log('已发送ping消息到PPTist');
+        } catch (error) {
+            console.error('发送ping消息失败:', error);
+        }
+    });
+    
+    // 更新幻灯片指示器
+    function updateSlideIndicator() {
+        const slideIndicator = document.getElementById('slide-indicator');
+        if (slideIndicator) {
+            slideIndicator.textContent = `${slideState.currentSlide} / ${slideState.totalSlides}`;
+        }
+    }
+    
+    // 跳转到指定幻灯片
+    function goToSlide(slideNumber) {
+        try {
+            // 发送消息到PPTist以切换幻灯片
+            pptistFrame.contentWindow.postMessage({
+                type: 'pptist-command',
+                action: 'go-to-slide',
+                slideNumber: slideNumber
+            }, '*');
+            
+            // 更新当前幻灯片索引
+            slideState.currentSlide = slideNumber;
+            updateSlideIndicator();
+        } catch (error) {
+            console.error('无法切换幻灯片:', error);
+        }
+    }
+    
+    // 根据章节加载PPT
+    async function loadChapterPPT(chapterId) {
+        console.log(`加载章节${chapterId}的PPT`);
+        
+        // 更新状态
+        slideState.chapterId = chapterId;
+        slideState.pptLoaded = false;
+        
+        // 显示加载中状态
+        if (loadingIndicator) loadingIndicator.style.display = 'flex';
+        if (errorState) errorState.style.display = 'none';
+        
+        try {
+            // 发送消息到PPTist以加载章节PPT
+            pptistFrame.contentWindow.postMessage({
+                type: 'pptist-command',
+                action: 'load-ppt',
+                chapterId: chapterId
+            }, '*');
+            
+            console.log(`已发送加载章节${chapterId}的PPT指令`);
+        } catch (error) {
+            console.error('加载PPT失败:', error);
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+            if (errorState) errorState.style.display = 'flex';
+        }
+    }
+    
+    // 将loadChapterPPT函数暴露到全局作用域，允许在章节选择器中调用
+    window.loadChapterPPT = loadChapterPPT;
+    
+    // 绑定控制按钮事件
+    bindControlEvents();
+}
+
+/**
+ * 初始化课堂控制面板
+ * 处理课堂状态相关的UI
+ */
+function initClassroomControlPanel() {
+    console.log('初始化课堂控制面板...');
+    
+    // 初始化课堂状态控制
+    const statusBadge = document.querySelector('.class-status .status-badge');
+    const classTime = document.querySelector('.class-status .class-time');
+    const pauseBtn = document.querySelector('.class-status .control-btn:nth-child(3)');
+    const stopBtn = document.querySelector('.class-status .control-btn:nth-child(4)');
+    
+    // 课堂计时器
+    let timer = null;
+    let seconds = 0;
+    let isPaused = false;
+    
+    // 更新课堂时间显示
+    function updateClassTime() {
+        if (classTime) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            classTime.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    // 开始计时
+    function startTimer() {
+        if (!timer) {
+            timer = setInterval(() => {
+                if (!isPaused) {
+                    seconds++;
+                    updateClassTime();
+                }
+            }, 1000);
+        }
+    }
+    
+    // 如果存在暂停按钮，添加事件监听
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', function() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                this.innerHTML = '<i class="fas fa-play"></i>';
+                statusBadge.classList.remove('active');
+                statusBadge.innerHTML = `
+                    <i class="fas fa-circle"></i>
+                    <span class="zh">课堂已暂停</span>
+                    <span class="en">Class Paused</span>
+                `;
+                showNotification('课堂已暂停', 'info');
+            } else {
+                this.innerHTML = '<i class="fas fa-pause"></i>';
+                statusBadge.classList.add('active');
+                statusBadge.innerHTML = `
+                    <i class="fas fa-circle"></i>
+                    <span class="zh">课堂进行中</span>
+                    <span class="en">Class in Progress</span>
+                `;
+                showNotification('课堂已继续', 'success');
+            }
+        });
+    }
+    
+    // 如果存在停止按钮，添加事件监听
+    if (stopBtn) {
+        stopBtn.addEventListener('click', function() {
+            // 确认框
+            if (confirm('确定要结束本次课堂吗？')) {
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+                
+                statusBadge.classList.remove('active');
+                statusBadge.innerHTML = `
+                    <i class="fas fa-circle"></i>
+                    <span class="zh">课堂已结束</span>
+                    <span class="en">Class Ended</span>
+                `;
+                
+                pauseBtn.disabled = true;
+                this.disabled = true;
+                
+                showNotification('课堂已结束', 'success');
+            }
+        });
+    }
+    
+    // 初始化计时器
+    startTimer();
+    
+    console.log('课堂控制面板初始化完成');
+}

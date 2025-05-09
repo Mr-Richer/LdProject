@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中国文化人工智能课程平台 - 教师端</title>
+    <title>中国文化AI教学平台</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- 新增语言切换专用样式文件 -->
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- 章节上传样式 -->
     <link rel="stylesheet" href="../src/styles/chapter-upload.css">
@@ -1039,90 +1039,8 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <tr>
-                                                        <td>1</td>
-                                                        <td>
-                                                            <p class="zh">中国传统节日的起源与演变</p>
-                                                            <p class="en">Origin and Evolution of Traditional Chinese Festivals</p>
-                                                        </td>
-                                                        <td>
-                                                            <span class="expansion-badge regional">
-                                                                <span class="zh">区域文化</span>
-                                                                <span class="en">Regional Culture</span>
-                                                            </span>
-                                                        </td>
-                                                        <td class="table-actions">
-                                                            <button class="expansion-action-btn preview" title="预览">
-                                                                <i class="fas fa-eye"></i>
-                                                            </button>
-                                                            <button class="expansion-action-btn edit" title="修改">
-                                                                <i class="fas fa-edit"></i>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>2</td>
-                                                        <td>
-                                                            <p class="zh">中国文学对世界文学的影响</p>
-                                                            <p class="en">Influence of Chinese Literature on World Literature</p>
-                                                        </td>
-                                                        <td>
-                                                            <span class="expansion-badge comparative">
-                                                                <span class="zh">中西文化对比</span>
-                                                                <span class="en">East-West Comparison</span>
-                                                            </span>
-                                                        </td>
-                                                        <td class="table-actions">
-                                                            <button class="expansion-action-btn preview" title="预览">
-                                                                <i class="fas fa-eye"></i>
-                                                            </button>
-                                                            <button class="expansion-action-btn edit" title="修改">
-                                                                <i class="fas fa-edit"></i>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>3</td>
-                                                        <td>
-                                                            <p class="zh">中国传统园林艺术与数学几何学</p>
-                                                            <p class="en">Chinese Traditional Garden Art and Mathematics Geometry</p>
-                                                        </td>
-                                                        <td>
-                                                            <span class="expansion-badge interdisciplinary">
-                                                                <span class="zh">跨学科知识</span>
-                                                                <span class="en">Interdisciplinary Knowledge</span>
-                                                            </span>
-                                                        </td>
-                                                        <td class="table-actions">
-                                                            <button class="expansion-action-btn preview" title="预览">
-                                                                <i class="fas fa-eye"></i>
-                                                            </button>
-                                                            <button class="expansion-action-btn edit" title="修改">
-                                                                <i class="fas fa-edit"></i>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>4</td>
-                                                        <td>
-                                                            <p class="zh">校园文化中的传统元素应用</p>
-                                                            <p class="en">Application of Traditional Elements in Campus Culture</p>
-                                                        </td>
-                                                        <td>
-                                                            <span class="expansion-badge school">
-                                                                <span class="zh">校本文化</span>
-                                                                <span class="en">School-based Culture</span>
-                                                            </span>
-                                                        </td>
-                                                        <td class="table-actions">
-                                                            <button class="expansion-action-btn preview" title="预览">
-                                                                <i class="fas fa-eye"></i>
-                                                            </button>
-                                                            <button class="expansion-action-btn edit" title="修改">
-                                                                <i class="fas fa-edit"></i>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
+                                                    
+                                                   
                                                 </tbody>
                                             </table>
                                         </div>
@@ -2371,54 +2289,27 @@
                                     <!-- 课件展示区 -->
                                     <div class="slides-display">
                                         <div class="slide-preview" id="slide-preview">
-                                            <!-- PPTist播放器将在这里初始化 -->
-                                            <div class="slide-placeholder">
-                                                <div class="placeholder-icon">
-                                                    <i class="fas fa-images"></i>
-                                                </div>
-                                                <div class="placeholder-text zh">选择章节后加载PPT</div>
-                                                <div class="placeholder-text en">Select chapter to load PPT</div>
+                                            <!-- 替换为PPTist嵌入iframe -->
+                                            <div class="pptist-container">
+                                                <iframe id="pptistClassFrame" src="http://localhost:5173/" frameborder="0" width="100%" height="700" allow="fullscreen" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+                                                
+                                                <!-- 幻灯片加载中状态显示 -->
+                                                <div class="loading-indicator" id="pptist-loading" style="display: none;">
+                                                    <div class="spinner"></div>
+                                                    <p class="zh">正在加载课件...</p>
+                                                    <p class="en">Loading courseware...</p>
                                             </div>
                                             
-                                            <div class="slide-controls">
-                                                <button class="slide-control-btn" id="prev-slide-btn" title="上一张">
-                                                    <i class="fas fa-step-backward"></i>
-                                                </button>
-                                                <button class="slide-control-btn" id="play-slides-btn" title="自动播放">
-                                                    <i class="fas fa-play"></i>
-                                                </button>
-                                                <button class="slide-control-btn" id="next-slide-btn" title="下一张">
-                                                    <i class="fas fa-step-forward"></i>
-                                                </button>
-                                                <span class="slide-counter" id="slide-indicator">- / -</span>
-                                            </div>
-                                            
-                                            <!-- 全屏模式下的互动工具栏 -->
-                                            <div class="fullscreen-tools">
-                                                <button class="fullscreen-tool" data-interaction="quiz">
-                                                    <i class="fas fa-tasks"></i>
-                                                    <span class="zh">课堂小测</span>
-                                                    <span class="en">Quiz</span>
-                                                </button>
-                                                <button class="fullscreen-tool" data-interaction="knowledge">
-                                                    <i class="fas fa-brain"></i>
-                                                    <span class="zh">知识拓展</span>
-                                                    <span class="en">Knowledge</span>
-                                                </button>
-                                                <button class="fullscreen-tool" data-interaction="ideology">
-                                                    <i class="fas fa-flag"></i>
-                                                    <span class="zh">课程思政</span>
-                                                    <span class="en">Ideology</span>
+                                                <!-- 错误状态显示 -->
+                                                <div class="error-state" id="pptist-error" style="display: none;">
+                                                    <i class="fas fa-exclamation-circle"></i>
+                                                    <p class="zh">加载课件失败</p>
+                                                    <p class="en">Failed to load courseware</p>
+                                                    <button class="retry-btn" id="retry-load-btn">
+                                                        <span class="zh">重试</span>
+                                                        <span class="en">Retry</span>
                                                 </button>
                                             </div>
-                                        </div>
-                                        
-                                        <!-- 幻灯片缩略图 -->
-                                        <div class="slide-thumbnails">
-                                            <div class="thumbnail-scroll">
-                                                <!-- 幻灯片缩略图将由JavaScript动态生成 -->
-                                                <div class="thumbnail-placeholder zh">加载缩略图...</div>
-                                                <div class="thumbnail-placeholder en">Loading thumbnails...</div>
                                                 </div>
                                                 </div>
                                                 </div>
@@ -4432,6 +4323,272 @@
                     };
             
             document.body.appendChild(ideologyModulesLoaderScript);
+        });
+    </script>
+    <!-- PPTist通信脚本 -->
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('初始化PPTist通信脚本');
+            
+            // 处理课前PPTist iframe的通信
+            const pptistFrame = document.getElementById('pptistFrame');
+            if (pptistFrame) {
+                console.log('找到课前PPTist iframe，初始化通信...');
+                initPPTistCommunication(pptistFrame, 'pre');
+            }
+            
+            // 处理课中PPTist iframe的通信
+            const pptistClassFrame = document.getElementById('pptistClassFrame');
+            if (pptistClassFrame) {
+                console.log('找到课中PPTist iframe，初始化通信...');
+                initPPTistCommunication(pptistClassFrame, 'in');
+            }
+            
+            /**
+             * 初始化PPTist通信
+             * @param {HTMLIFrameElement} frame - PPTist iframe元素
+             * @param {string} mode - 模式，'pre'表示课前，'in'表示课中
+             */
+            function initPPTistCommunication(frame, mode) {
+                // 在iframe加载完成后初始化通信
+                frame.addEventListener('load', function() {
+                    console.log(`PPTist ${mode === 'pre' ? '课前' : '课中'} iframe已加载完成`);
+                        
+                    // 发送ping消息
+                    try {
+                        frame.contentWindow.postMessage({
+                            type: 'ping',
+                            mode: mode
+                        }, '*');
+                        console.log(`已发送ping消息到PPTist ${mode === 'pre' ? '课前' : '课中'} iframe`);
+                    } catch (error) {
+                        console.error(`发送ping消息到PPTist ${mode === 'pre' ? '课前' : '课中'} iframe失败:`, error);
+                    }
+                });
+            }
+            
+            // 全局消息事件监听器
+            window.addEventListener('message', function(event) {
+                try {
+                    // 检查消息源（实际生产环境应验证origin）
+                    if (event.data && event.data.type === 'pptist-event') {
+                        console.log('收到PPTist事件消息:', event.data);
+                        
+                        // 处理各种PPTist事件
+                        switch (event.data.action) {
+                            case 'initialized':
+                                console.log('PPTist初始化完成');
+                                break;
+                                
+                            case 'ppt-loaded':
+                                console.log('PPT加载成功');
+                                // 隐藏加载中状态
+                                const loadingIndicator = document.getElementById('pptist-loading');
+                                if (loadingIndicator) loadingIndicator.style.display = 'none';
+                                // 隐藏错误状态
+                                const errorState = document.getElementById('pptist-error');
+                                if (errorState) errorState.style.display = 'none';
+                                // 更新幻灯片计数器
+                                if (event.data.slideCount) {
+                                    const slideIndicator = document.getElementById('slide-indicator');
+                                    if (slideIndicator) {
+                                        slideIndicator.textContent = `1 / ${event.data.slideCount}`;
+                                    }
+                                }
+                                break;
+                                
+                            case 'ppt-loading':
+                                console.log('PPT正在加载中');
+                                // 显示加载中状态
+                                const loadingInd = document.getElementById('pptist-loading');
+                                if (loadingInd) loadingInd.style.display = 'flex';
+                                break;
+                                
+                            case 'ppt-load-error':
+                                console.error('PPT加载失败:', event.data.error);
+                                // 显示错误状态
+                                const errorEl = document.getElementById('pptist-error');
+                                if (errorEl) errorEl.style.display = 'flex';
+                                // 隐藏加载中状态
+                                const loadingEl = document.getElementById('pptist-loading');
+                                if (loadingEl) loadingEl.style.display = 'none';
+                                break;
+                                
+                            case 'slide-change':
+                                console.log('幻灯片切换:', event.data.currentSlide, '/', event.data.totalSlides);
+                                // 更新幻灯片计数器
+                                if (event.data.currentSlide && event.data.totalSlides) {
+                                    const slideIndicator = document.getElementById('slide-indicator');
+                                    if (slideIndicator) {
+                                        slideIndicator.textContent = `${event.data.currentSlide} / ${event.data.totalSlides}`;
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                } catch (error) {
+                    console.error('处理PPTist消息出错:', error);
+                }
+            });
+        });
+    </script>
+    <!-- 语言切换修复脚本 -->
+    <script>
+        // 确保语言切换功能正常工作
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('初始化语言切换增强脚本');
+            
+            // 确保加载时检查语言状态
+            function applyLanguageState() {
+                const isEnMode = document.body.classList.contains('en-mode');
+                document.documentElement.setAttribute('lang', isEnMode ? 'en' : 'zh');
+                console.log('应用当前语言模式:', isEnMode ? '英文' : '中文');
+                
+                // 强制刷新CSS规则的应用
+                document.body.style.display = 'none';
+                document.body.offsetHeight; // 强制重排
+                document.body.style.display = '';
+            }
+            
+            // 页面加载时应用一次
+            applyLanguageState();
+            
+            // 监听语言变化事件
+            document.addEventListener('langchange', function(e) {
+                console.log('检测到语言变化:', e.detail.language);
+                applyLanguageState();
+                    
+                // 通知所有iframe
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    if (iframe.contentWindow) {
+                        try {
+                            iframe.contentWindow.postMessage({
+                                type: 'language-change',
+                                language: e.detail.language
+                            }, '*');
+                        } catch (error) {
+                            console.error('向iframe发送语言变更消息失败:', error);
+                        }
+                    }
+                });
+            });
+            
+            // 确保所有iframe加载后正确应用语言
+            window.addEventListener('load', function() {
+                const isEnMode = document.body.classList.contains('en-mode');
+                const currentLang = isEnMode ? 'en' : 'zh';
+                
+                // 更新所有iframe
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    if (iframe.contentWindow) {
+                        try {
+                            iframe.contentWindow.postMessage({
+                                type: 'language-change',
+                                language: currentLang
+                            }, '*');
+                        } catch (error) {
+                            console.error('向iframe发送语言设置消息失败:', error);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+    <!-- 在现有脚本之后添加章节选择器与PPTist连接的脚本 -->
+    <script>
+        // 在现有脚本之后添加章节选择器与PPTist连接的脚本
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('初始化课中章节选择器与PPTist连接...');
+            
+            // 获取课中章节选择器
+            const inClassChapterSelect = document.getElementById('in-class-chapter-select');
+            if (inClassChapterSelect) {
+                // 移除现有的事件监听器，避免重复绑定
+                if (inClassChapterSelect._chapterChangeHandler) {
+                    inClassChapterSelect.removeEventListener('change', inClassChapterSelect._chapterChangeHandler);
+                }
+                
+                // 添加新的事件处理函数
+                inClassChapterSelect._chapterChangeHandler = function() {
+                    const chapterId = this.value;
+                    if (!chapterId) return;
+                    
+                    // 获取当前语言
+                    const lang = document.body.classList.contains('en-mode') ? 'en' : 'zh';
+                    
+                    // 获取章节标题
+                    const selectedOption = Array.from(this.options).find(option => 
+                        option.value === chapterId && option.classList.contains(lang)
+                    );
+                    
+                    const chapterTitle = selectedOption ? selectedOption.textContent : `第${chapterId}章`;
+                    console.log(`选择了章节: ${chapterId}, 标题: ${chapterTitle}`);
+                    
+                    // 获取PPTist iframe
+                    const pptistFrame = document.getElementById('pptistClassFrame');
+                    if (pptistFrame && pptistFrame.contentWindow) {
+                        try {
+                            // 显示加载中状态
+                            const loadingIndicator = document.getElementById('pptist-loading');
+                            if (loadingIndicator) loadingIndicator.style.display = 'flex';
+                            
+                            // 隐藏错误状态
+                            const errorState = document.getElementById('pptist-error');
+                            if (errorState) errorState.style.display = 'none';
+                            
+                            // 尝试使用ChapterPptService加载PPT
+                            if (window.ChapterPptService && typeof ChapterPptService.loadPptByChapterId === 'function') {
+                                ChapterPptService.loadPptByChapterId(chapterId);
+                                console.log('使用ChapterPptService加载PPT');
+                            } else {
+                                // 回退方案：直接发送消息到PPTist
+                                pptistFrame.contentWindow.postMessage({
+                                    type: 'pptist-command',
+                                    action: 'load-ppt',
+                                    chapterId: chapterId
+                                }, '*');
+                                console.log('直接发送消息到PPTist加载PPT');
+                            }
+                            
+                            console.log(`已发送加载章节${chapterId}的PPT指令`);
+                            
+                            // 切换到课件展示面板
+                            const slidesPanelControlItem = document.querySelector('.control-item:nth-child(2)');
+                            if (slidesPanelControlItem) {
+                                slidesPanelControlItem.click();
+                            } else {
+                                // 直接显示课件展示面板
+                                const checkInPanel = document.getElementById('check-in-panel');
+                                const slidesPanel = document.getElementById('slides-panel');
+                                if (checkInPanel && slidesPanel) {
+                                    checkInPanel.classList.remove('active');
+                                    slidesPanel.classList.add('active');
+                                }
+                            }
+                            
+                            // 显示通知
+                            if (typeof showNotification === 'function') {
+                                showNotification(`正在加载第${chapterId}章PPT课件`, 'info');
+                            }
+                        } catch (error) {
+                            console.error('加载PPT失败:', error);
+                            if (loadingIndicator) loadingIndicator.style.display = 'none';
+                            if (errorState) errorState.style.display = 'flex';
+                        }
+                    } else {
+                        console.error('PPTist iframe不存在或未加载');
+                    }
+                };
+                
+                // 绑定事件处理函数
+                inClassChapterSelect.addEventListener('change', inClassChapterSelect._chapterChangeHandler);
+                console.log('课中章节选择器事件绑定完成');
+            } else {
+                console.error('课中章节选择器未找到');
+            }
         });
     </script>
 </body>
