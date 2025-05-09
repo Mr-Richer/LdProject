@@ -83,4 +83,14 @@ export class MindmapController {
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.mindmapService.remove(id);
   }
+
+  @Get('mindmaps/chapter/:chapterId')
+  async findByChapter(@Param('chapterId', ParseIntPipe) chapterId: number) {
+    const mindmaps = await this.mindmapService.findByChapter(chapterId);
+    return {
+      code: 200,
+      message: '获取思维导图列表成功',
+      data: mindmaps
+    };
+  }
 } 

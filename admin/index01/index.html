@@ -974,7 +974,7 @@
                                                     <span class="zh">编辑</span>
                                                     <span class="en">Edit</span>
                                                 </button>
-                                                <button class="result-action-btn">
+                                                <button class="result-action-btn save-highlight">
                                                     <i class="fas fa-save"></i>
                                                     <span class="zh">保存</span>
                                                     <span class="en">Save</span>
@@ -1148,7 +1148,7 @@
                                                     <div class="option-group">
                                                         <label class="zh">案例类型</label>
                                                         <label class="en">Case Type</label>
-                                                        <select class="ideology-select">
+                                                        <select class="ideology-select" id="case-type-select">
                                                             <option value="story" class="zh">故事型案例</option>
                                                             <option value="story" class="en">Story-based Case</option>
                                                             <option value="debate" class="zh">辩论型案例</option>
@@ -1162,7 +1162,7 @@
                                                     <div class="option-group">
                                                         <label class="zh">案例长度</label>
                                                         <label class="en">Case Length</label>
-                                                        <select class="ideology-select">
+                                                        <select class="ideology-select" id="case-length-select">
                                                             <option value="short" class="zh">简短 (300字以内)</option>
                                                             <option value="short" class="en">Short (Under 300 words)</option>
                                                             <option value="medium" class="zh">中等 (500-800字)</option>
@@ -1203,8 +1203,8 @@
                                                     </div>
                                                 </div>
                                                 <div class="result-content">
-                                                    <textarea class="case-content-textarea zh" readonly placeholder="生成的思政案例将显示在这里..."></textarea>
-                                                    <textarea class="case-content-textarea en" readonly placeholder="Generated case will be displayed here..."></textarea>
+                                                    <textarea class="case-content-textarea zh" readonly placeholder="生成的思政案例将显示在这里..." style="height: 300px; min-height: 300px; max-height: 300px; resize: none; overflow-y: auto; overflow-x: hidden;"></textarea>
+                                                    <textarea class="case-content-textarea en" readonly placeholder="Generated case will be displayed here..." style="height: 300px; min-height: 300px; max-height: 300px; resize: none; overflow-y: auto; overflow-x: hidden;"></textarea>
                                                 </div>
                                             </div>
                                             
@@ -1236,13 +1236,15 @@
                                                         <span class="zh">添加网络链接</span>
                                                         <span class="en">Add URL Link</span>
                                                     </div>
-                                                    <div class="url-input-container">
-                                                        <input type="text" class="url-input zh" placeholder="请输入视频或图片的网络链接...">
-                                                        <input type="text" class="url-input en" placeholder="Enter URL for video or image...">
-                                                        <button class="add-url-btn">
-                                                            <i class="fas fa-plus"></i>
-                                                            <span class="zh">添加</span>
-                                                            <span class="en">Add</span>
+                                                    <div class="url-input-container" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: flex-end;">
+                                                        <div style="flex: 1; position: relative;">
+                                                            <input type="text" class="url-input zh" placeholder="请输入视频或图片的网络链接..." style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; transition: all 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                                            <input type="text" class="url-input en" placeholder="Enter URL for video or image..." style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; transition: all 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: none;">
+                                                        </div>
+                                                        <button class="add-url-btn" style="background-color: #1976d2; color: white; border: none; border-radius: 8px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; min-width: 100px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(25, 118, 210, 0.2); transition: all 0.2s ease;">
+                                                            <i class="fas fa-plus" style="margin-right: 8px;"></i>
+                                                            <span class="zh">添加链接</span>
+                                                            <span class="en" style="display: none;">Add Link</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1261,102 +1263,32 @@
                                             </div>
                                             
                                             <!-- 思政案例列表 -->
-                                            <div class="ideology-cases-list">
-                                                <div class="list-header">
-                                                    <h4 class="zh">思政案例列表</h4>
-                                                    <h4 class="en">Ideology Cases List</h4>
+                                            <div class="ideology-cases-list" style="margin-top: 30px; padding: 25px; background-color: var(--apple-bg-light); border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; border: 1px solid #e0e0e0;">
+                                                <div class="list-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                                                    <h4 class="zh" style="font-size: 18px; font-weight: 600; color: var(--apple-text-primary); margin: 0;">思政案例列表</h4>
+                                                    <h4 class="en" style="font-size: 18px; font-weight: 600; color: var(--apple-text-primary); margin: 0;">Ideology Cases List</h4>
                                                     <button class="red-btn" id="createCaseBtn">
-                                                        <i class="fas fa-plus"></i>
-                                                        <span class="zh">新建案例</span>
-                                                        <span class="en">New Case</span>
+                                                        <i class="fas fa-save"></i>
+                                                        <span class="zh">保存案例</span>
+                                                        <span class="en">Save Case</span>
                                                     </button>
                                                 </div>
-                                                <div class="cases-table">
-                                                    <table>
+                                                <div class="cases-table" style="width: 100%; overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);">
+                                                    <table style="width: 100%; border-collapse: collapse; background-color: white; border-radius: 10px; overflow: hidden;">
                                                         <thead>
                                                             <tr>
-                                                                <th class="col-number zh">序号</th>
-                                                                <th class="col-number en">No.</th>
-                                                                <th class="col-title zh">案例标题</th>
-                                                                <th class="col-title en">Case Title</th>
-                                                                <th class="col-resources zh">关联资源</th>
-                                                                <th class="col-resources en">Resources</th>
-                                                                <th class="col-actions zh">操作</th>
-                                                                <th class="col-actions en">Actions</th>
+                                                                <th class="col-number zh" style="background-color: var(--apple-gray-100); font-weight: 600; color: var(--apple-text-primary); padding: 14px 18px; white-space: nowrap; font-size: 14px; border-bottom: 1px solid var(--apple-gray-200);">序号</th>
+                                                                <th class="col-number en" style="background-color: var(--apple-gray-100); font-weight: 600; color: var(--apple-text-primary); padding: 14px 18px; white-space: nowrap; font-size: 14px; border-bottom: 1px solid var(--apple-gray-200);">No.</th>
+                                                                <th class="col-title zh" style="background-color: var(--apple-gray-100); font-weight: 600; color: var(--apple-text-primary); padding: 14px 18px; white-space: nowrap; font-size: 14px; border-bottom: 1px solid var(--apple-gray-200);">案例标题</th>
+                                                                <th class="col-title en" style="background-color: var(--apple-gray-100); font-weight: 600; color: var(--apple-text-primary); padding: 14px 18px; white-space: nowrap; font-size: 14px; border-bottom: 1px solid var(--apple-gray-200);">Case Title</th>
+                                                                <th class="col-resources zh" style="background-color: var(--apple-gray-100); font-weight: 600; color: var(--apple-text-primary); padding: 14px 18px; white-space: nowrap; font-size: 14px; border-bottom: 1px solid var(--apple-gray-200);">关联资源</th>
+                                                                <th class="col-resources en" style="background-color: var(--apple-gray-100); font-weight: 600; color: var(--apple-text-primary); padding: 14px 18px; white-space: nowrap; font-size: 14px; border-bottom: 1px solid var(--apple-gray-200);">Resources</th>
+                                                                <th class="col-actions zh" style="background-color: var(--apple-gray-100); font-weight: 600; color: var(--apple-text-primary); padding: 14px 18px; white-space: nowrap; font-size: 14px; border-bottom: 1px solid var(--apple-gray-200);">操作</th>
+                                                                <th class="col-actions en" style="background-color: var(--apple-gray-100); font-weight: 600; color: var(--apple-text-primary); padding: 14px 18px; white-space: nowrap; font-size: 14px; border-bottom: 1px solid var(--apple-gray-200);">Actions</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            <tr>
-                                                                <td>1</td>
-                                                                <td>
-                                                                    <p class="zh">传统文化的现代传承与发展</p>
-                                                                    <p class="en">Modern Inheritance of Traditional Culture</p>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="resource-tags">
-                                                                        <span class="resource-tag image"><i class="fas fa-image"></i></span>
-                                                                        <span class="resource-tag video"><i class="fas fa-video"></i></span>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <button class="case-action-btn view">
-                                                                        <i class="fas fa-eye"></i>
-                                                                    </button>
-                                                                    <button class="case-action-btn edit">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button class="case-action-btn delete">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td>2</td>
-                                                                <td>
-                                                                    <p class="zh">中华文化自信与民族复兴</p>
-                                                                    <p class="en">Cultural Confidence and National Rejuvenation</p>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="resource-tags">
-                                                                        <span class="resource-tag image"><i class="fas fa-image"></i></span>
-                                                                        <span class="resource-tag link"><i class="fas fa-link"></i></span>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <button class="case-action-btn view">
-                                                                        <i class="fas fa-eye"></i>
-                                                                    </button>
-                                                                    <button class="case-action-btn edit">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button class="case-action-btn delete">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td>3</td>
-                                                                <td>
-                                                                    <p class="zh">中国传统文化的全球影响</p>
-                                                                    <p class="en">Global Impact of Chinese Traditional Culture</p>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="resource-tags">
-                                                                        <span class="resource-tag video"><i class="fas fa-video"></i></span>
-                                                                    </div>
-                                                                </td>
-                                                                <td>
-                                                                    <button class="case-action-btn view">
-                                                                        <i class="fas fa-eye"></i>
-                                                                    </button>
-                                                                    <button class="case-action-btn edit">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button class="case-action-btn delete">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
+                                                            
                                                         </tbody>
                                                     </table>
                                                 </div>
@@ -1409,19 +1341,21 @@
                                                     <h4 class="zh">讨论题列表</h4>
                                                     <h4 class="en">Discussion Topics</h4>
                                                 </div>
-                                                <div class="discussion-item">
-                                                    <div class="discussion-number">1</div>
-                                                    <div class="discussion-content">
-                                                        <p class="zh">如何理解中华优秀传统文化在当代中国的传承与创新？结合具体案例分析其重要性。</p>
-                                                        <p class="en">How do you understand the inheritance and innovation of traditional Chinese culture in contemporary China? Analyze its importance with specific examples.</p>
+                                                <div class="discussion-list" style="max-height: 350px; overflow-y: auto; border: 1px solid #e0e0e0; padding: 10px; border-radius: 5px;">
+                                                    <div class="discussion-item" style="margin-bottom: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #ddd;">
+                                                        <div class="discussion-number" style="display: inline-block; width: 25px; height: 25px; line-height: 25px; text-align: center; background-color: #007bff; color: white; border-radius: 50%; margin-right: 10px; font-weight: bold;">1</div>
+                                                        <div class="discussion-content" style="display: inline-block; width: calc(100% - 80px); vertical-align: middle;">
+                                                            <p class="zh" style="margin: 0;">如何理解中华优秀传统文化在当代中国的传承与创新？结合具体案例分析其重要性。</p>
+                                                            <p class="en" style="margin: 0; display: none;">How do you understand the inheritance and innovation of traditional Chinese culture in contemporary China? Analyze its importance with specific examples.</p>
                                                     </div>
-                                                    <div class="discussion-actions">
-                                                        <button class="action-btn-small"><i class="fas fa-edit"></i></button>
-                                                        <button class="action-btn-small"><i class="fas fa-trash"></i></button>
+                                                        <div class="discussion-actions" style="display: inline-block; vertical-align: middle;">
+                                                            <button class="action-btn-small" style="background: none; border: none; cursor: pointer; color: #007bff;"><i class="fas fa-edit"></i></button>
+                                                            <button class="action-btn-small" style="background: none; border: none; cursor: pointer; color: #dc3545;"><i class="fas fa-trash"></i></button>
                                                     </div>
                                                 </div>
-                                                <div class="discussion-controls">
-                                                    <button class="btn-secondary">
+                                                </div>
+                                                <div class="discussion-controls" style="margin-top: 15px; text-align: center;">
+                                                    <button class="btn-secondary" style="background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
                                                         <i class="fas fa-save"></i>
                                                         <span class="zh">保存讨论题</span>
                                                         <span class="en">Save Topics</span>
@@ -4407,13 +4341,19 @@
                 copyImage: 'http://localhost:3000/api/admin/copy-image'
             }
         };
+        
+        // 全局API基础URL
+        window.API_BASE_URL = 'http://localhost:3000';
+        
         console.log('配置已加载:', window.APP_CONFIG);
     </script>
     <!-- 通知模块 -->
     <script src="../src/js/notification.js"></script>
     <!-- 主要脚本 -->
     <script src="script_fixed.js"></script>
-    <!-- 课堂小测API初始化脚本 - 确保在其他脚本之前加载 -->
+    <!-- 课程思政模块 -->
+    <script src="../src/js/ideology-module.js"></script>
+    
     <script src="../src/js/quiz-api-init.js"></script>
     <!-- 章节服务 -->
     <script src="../src/services/ChapterPptService.js"></script>
@@ -4429,6 +4369,71 @@
     
     <!-- 思维导图相关脚本 -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script>
+        // 确保ECharts正确加载
+        window.addEventListener('DOMContentLoaded', function() {
+            if (typeof echarts === 'undefined') {
+                console.error('ECharts库未正确加载，尝试重新加载');
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
+                script.onload = function() {
+                    console.log('ECharts库已成功加载');
+                };
+                script.onerror = function() {
+                    console.error('ECharts库加载失败，请检查网络连接');
+                };
+                document.head.appendChild(script);
+            } else {
+                console.log('ECharts库已加载: ' + echarts.version);
+            }
+        });
+    </script>
+    
+    <!-- 在页面底部, 在script_fixed.js后面添加 -->
+    <!-- 模块加载器 -->
+    <div id="module-loader-container"></div>
+    <script>
+        // 加载模块加载器
+        fetch('module-loader.html')
+            .then(response => {
+                if (!response.ok) {
+                    console.error('加载模块加载器HTML失败:', response.status);
+                    throw new Error('加载模块加载器HTML失败');
+                }
+                return response.text();
+            })
+            .then(html => {
+                document.getElementById('module-loader-container').innerHTML = html;
+                console.log('模块加载器HTML已加载');
+            })
+            .catch(error => {
+                console.error('加载模块加载器失败:', error);
+            });
+    </script>
+    
+    <!-- 思政模块加载脚本 -->
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            // 加载思政模块加载器
+            const ideologyModulesLoaderScript = document.createElement('script');
+            ideologyModulesLoaderScript.src = '/src/js/modules/ideology-modules-loader.js';
+            ideologyModulesLoaderScript.async = true;
+            
+            ideologyModulesLoaderScript.onload = function() {
+                console.log('思政模块加载器已加载');
+                // 如果存在loadIdeologyModules函数，则调用
+                if (typeof window.loadIdeologyModules === 'function') {
+                    window.loadIdeologyModules();
+                }
+            };
+            
+            ideologyModulesLoaderScript.onerror = function(error) {
+                console.error('加载思政模块加载器失败:', error);
+                    };
+            
+            document.body.appendChild(ideologyModulesLoaderScript);
+        });
+    </script>
 </body>
 </html> 
 

@@ -485,14 +485,34 @@ ${this.getQuizJsonFormat(quizType)}
    */
   private getDifficultyText(difficulty: string): string {
     switch (difficulty.toLowerCase()) {
-      case 'easy':
-        return '简单';
-      case 'medium':
-        return '中等';
-      case 'hard':
-        return '困难';
-      default:
-        return '中等';
+      case 'easy': return '简单';
+      case 'medium': return '中等';
+      case 'hard': return '困难';
+      default: return '中等';
+    }
+  }
+
+  /**
+   * 生成文本（用于简单文本生成场景）
+   * @param prompt 提示词
+   * @param modelType 模型类型
+   * @param temperature 温度参数
+   * @param maxTokens 最大token数
+   * @returns AI生成的响应
+   */
+  async generateText(prompt: string, modelType?: string, temperature?: number, maxTokens?: number): Promise<{text: string}> {
+    try {
+      const messages: AiChatMessage[] = [
+        { role: 'system', content: '你是一个有用的AI助手，擅长根据指示创建高质量的文本内容。' },
+        { role: 'user', content: prompt }
+      ];
+      
+      const response = await this.generateChatResponse(messages, modelType, temperature, maxTokens);
+      
+      return { text: response.content };
+    } catch (error) {
+      this.logger.error(`文本生成失败: ${error.message}`, error.stack);
+      throw new Error(`文本生成失败: ${error.message}`);
     }
   }
 } 

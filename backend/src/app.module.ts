@@ -9,6 +9,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { AiModule } from './modules/ai/ai.module';
 import { QuizModule } from './modules/quiz/quiz.module';
 import { MindmapModule } from './modules/mindmap/mindmap.module';
+import { IdeologyModule } from './modules/ideology/ideology.module';
 import aiConfig from './config/ai.config';
 
 @Module({
@@ -45,6 +46,7 @@ import aiConfig from './config/ai.config';
     QuizModule,   // Quiz功能模块
     HealthModule, // 健康检查模块
     MindmapModule,
+    IdeologyModule, // 思政案例模块
   ],
 })
 export class AppModule {} 

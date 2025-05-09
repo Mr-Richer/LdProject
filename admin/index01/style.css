@@ -257,3 +257,35 @@
     height: 100%;
     border: none;
 } 
+
+/* 保存按钮高亮样式 */
+.result-action-btn.save-highlight {
+    background-color: #28a745;
+    color: white;
+    border: 1px solid #218838;
+    position: relative;
+    animation: pulse 2s infinite;
+}
+
+.result-action-btn.save-highlight:hover {
+    background-color: #218838;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 5px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* 知识拓展列表提示行样式 */
+.knowledge-expansion-list .tip-row td {
+    background-color: #f0f8ff;
+    border-left: 4px solid #28a745;
+    font-weight: bold;
+} 

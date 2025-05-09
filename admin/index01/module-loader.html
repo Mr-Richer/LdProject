@@ -1,0 +1,135 @@
+<!-- 模块加载器 - 在页面底部引入此代码 -->
+<script>
+    // 检查是否已经加载了模块加载器
+    if (!window.ModuleLoader) {
+        console.log('加载模块加载器...');
+        
+        // 动态加载模块加载器脚本
+        const script = document.createElement('script');
+        script.src = '../src/js/load-modules.js';
+        script.onload = function() {
+            console.log('模块加载器加载完成');
+            // 确保模块加载器初始化
+            if (window.ModuleLoader && !window.ModuleLoader.initialized) {
+                console.log('初始化模块加载器');
+                window.ModuleLoader.init();
+                window.ModuleLoader.initialized = true;
+            }
+        };
+        script.onerror = function(error) {
+            console.error('加载模块加载器失败:', error);
+            alert('系统模块加载失败，请刷新页面重试');
+        };
+        document.body.appendChild(script);
+    }
+</script>
+
+<!-- 知识拓展模块样式 -->
+<style>
+    /* 知识拓展预览模态框样式 */
+    #mindmap-preview-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    #mindmap-preview-container .modal-content {
+        width: 90%;
+        max-width: 1200px;
+        height: 80%;
+        background-color: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #mindmap-preview-container .modal-header {
+        padding: 15px;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    #mindmap-preview-container .modal-body {
+        flex: 1;
+        overflow: auto;
+        padding: 15px;
+    }
+    
+    #mindmap-preview-container .close-modal-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #555;
+    }
+    
+    /* 知识拓展列表样式 */
+    .knowledge-expansion-list {
+        margin-top: 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .knowledge-expansion-list table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .knowledge-expansion-list th,
+    .knowledge-expansion-list td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .knowledge-expansion-list th {
+        background-color: #f5f5f5;
+        font-weight: bold;
+    }
+    
+    .knowledge-expansion-list .action-buttons {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .knowledge-expansion-list .action-buttons button {
+        background: none;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 4px;
+    }
+    
+    .knowledge-expansion-list .btn-view {
+        color: #2196F3;
+    }
+    
+    .knowledge-expansion-list .btn-delete {
+        color: #F44336;
+    }
+    
+    .knowledge-expansion-list .action-buttons button:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .badge-mindmap {
+        background-color: #2196F3;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        display: inline-block;
+    }
+</style> 

@@ -7,6 +7,7 @@
 ## 基础信息
 
 - **基础URL**: `http://localhost:3000`
+- **接口路径前缀**: `/api/api`（注意：当前系统实现使用了双重前缀）
 - **认证方式**: JWT Token (Authorization Header)
 - **响应格式**: JSON
 - **字符编码**: UTF-8
@@ -17,7 +18,7 @@
 
 使用 AI 生成思维导图结构。
 
-- **URL**: `/api/mindmap`
+- **URL**: `/api/api/mindmap`
 - **方法**: `POST`
 - **认证**: 需要
 - **请求体**:
@@ -61,7 +62,7 @@
 
 获取所有思维导图或指定用户的思维导图。
 
-- **URL**: `/api/mindmap`
+- **URL**: `/api/api/mindmap`
 - **方法**: `GET`
 - **认证**: 不需要
 - **查询参数**:
@@ -93,7 +94,7 @@
 
 获取特定ID的思维导图及其节点数据。
 
-- **URL**: `/api/mindmap/:id`
+- **URL**: `/api/api/mindmap/:id`
 - **方法**: `GET`
 - **认证**: 不需要
 - **路径参数**:
@@ -148,7 +149,7 @@
 
 删除特定ID的思维导图及其关联节点。
 
-- **URL**: `/api/mindmap/:id`
+- **URL**: `/api/api/mindmap/:id`
 - **方法**: `DELETE`
 - **认证**: 需要
 - **路径参数**:
@@ -171,7 +172,7 @@
 
 获取所有知识点或按类别筛选的知识点。
 
-- **URL**: `/api/mindmap/knowledge-points`
+- **URL**: `/api/api/mindmap/knowledge-points`
 - **方法**: `GET`
 - **认证**: 不需要
 - **查询参数**:
@@ -202,7 +203,7 @@
 
 获取特定ID的知识点详细信息。
 
-- **URL**: `/api/mindmap/knowledge-point/:id`
+- **URL**: `/api/api/mindmap/knowledge-point/:id`
 - **方法**: `GET`
 - **认证**: 不需要
 - **路径参数**:
@@ -229,6 +230,88 @@
 
 - **错误响应** (404, 500)
 
+### 7. 获取章节相关思维导图
+
+获取指定章节关联的思维导图列表。
+
+- **URL**: `/api/api/mindmaps/chapter/:chapterId`
+- **方法**: `GET`
+- **认证**: 不需要
+- **路径参数**:
+
+| 参数 | 类型 | 必须 | 说明 |
+|------|------|------|------|
+| chapterId | Number | 是 | 章节ID |
+
+- **成功响应** (200):
+
+```json
+{
+  "code": 200,
+  "message": "获取思维导图列表成功",
+  "data": [
+    {
+      "id": 14,
+      "title": "中秋思维导图",
+      "central_topic": "中秋",
+      "created_at": "2025-05-08T10:00:17.673Z",
+      "updated_at": "2025-05-08T10:00:17.673Z",
+      "type": "mindmap"
+    }
+  ]
+}
+```
+
+- **错误响应** (404, 500)
+
+### 8. 生成思维导图
+
+使用AI根据主题生成思维导图结构，不保存到数据库。
+
+- **URL**: `/api/api/generate-mindmap`
+- **方法**: `POST`
+- **认证**: 不需要
+- **请求体**:
+
+```json
+{
+  "topic": "中国传统文化",
+  "depth": 3,
+  "language": "zh",
+  "saveToDatabase": false
+}
+```
+
+| 参数 | 类型 | 必须 | 说明 |
+|------|------|------|------|
+| topic | String | 是 | 思维导图主题 |
+| depth | Number | 否 | 生成深度，默认为3 |
+| language | String | 否 | 语言，默认为中文(zh) |
+| saveToDatabase | Boolean | 否 | 是否保存到数据库，默认为false |
+
+- **成功响应** (201):
+
+```json
+{
+  "code": 200,
+  "message": "思维导图生成成功",
+  "data": {
+    "name": "中国传统文化",
+    "value": "中国传统文化",
+    "children": [
+      { 
+        "name": "哲学思想体系",
+        "value": "哲学思想体系",
+        "children": [...]
+      },
+      // 更多子节点...
+    ]
+  }
+}
+```
+
+- **错误响应** (400, 500)
+
 ## 错误码说明
 
 | 错误码 | 说明 |
@@ -244,4 +327,6 @@
 2. 需要身份验证的端点请在请求头中添加 `Authorization: Bearer <token>`
 3. 思维导图生成可能需要较长处理时间，前端应提供适当的等待提示
 4. `selectedKnowledgePoints` 非空时，会基于知识点进行内容扩充
-5. `max_levels` 过大会导致思维导图层级过多，影响可读性 
+5. `max_levels` 过大会导致思维导图层级过多，影响可读性
+6. **重要**: 当前系统实现使用了双重API前缀路径(`/api/api/`)，请确保在构建请求URL时使用正确的路径前缀
+7. 前端调用时，应当使用 `${API_BASE_URL}/api/api/路径` 的格式，而不是 `${API_BASE_URL}/api/路径` 

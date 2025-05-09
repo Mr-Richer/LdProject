@@ -1,3 +1,5 @@
+-- 优化版思维导图表结构 - 包含正确的外键约束
+
 -- 思维导图主表
 CREATE TABLE IF NOT EXISTS mindmaps (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -15,7 +17,7 @@ CREATE TABLE IF NOT EXISTS mindmaps (
     INDEX idx_expansion_type (expansion_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='思维导图主表';
 
--- 节点表
+-- 节点表 - 优化外键约束
 CREATE TABLE IF NOT EXISTS mindmap_nodes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     mindmap_id INT NOT NULL COMMENT '所属思维导图ID',
@@ -29,7 +31,8 @@ CREATE TABLE IF NOT EXISTS mindmap_nodes (
     INDEX idx_mindmap_id (mindmap_id),
     INDEX idx_parent_id (parent_id),
     INDEX idx_is_deleted (is_deleted),
-    FOREIGN KEY (mindmap_id) REFERENCES mindmaps(id) ON DELETE CASCADE
+    FOREIGN KEY (mindmap_id) REFERENCES mindmaps(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES mindmap_nodes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='思维导图节点表';
 
 -- 知识点表
@@ -55,5 +58,4 @@ CREATE TABLE IF NOT EXISTS mindmap_knowledge_relations (
     INDEX idx_knowledge_id (knowledge_id),
     FOREIGN KEY (mindmap_id) REFERENCES mindmaps(id) ON DELETE CASCADE,
     FOREIGN KEY (knowledge_id) REFERENCES knowledge_points(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='思维导图与知识点关联表';
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='思维导图与知识点关联表'; 

@@ -9,7 +9,7 @@ export class GenerateMindmapController {
 
   @Post('generate-mindmap')
   async generateMindmap(@Body() request: any) {
-    const { topic, depth, language } = request;
+    const { topic, depth, language, saveToDatabase = true } = request;
     
     const createMindmapDto: CreateMindmapDto = {
       title: `${topic}思维导图`,
@@ -20,16 +20,32 @@ export class GenerateMindmapController {
       style: MindmapStyle.STANDARD
     };
     
-    const result = await this.mindmapService.createWithAI(createMindmapDto);
-    
-    const detailData = await this.mindmapService.findOne(result.id);
-    
-    if (detailData && detailData.tree) {
-      return {
-        code: 200,
-        message: '思维导图生成成功',
-        data: this.convertToFrontendFormat(detailData.tree, language)
-      };
+    if (saveToDatabase) {
+      // 如果需要保存到数据库
+      const result = await this.mindmapService.createWithAI(createMindmapDto);
+      const detailData = await this.mindmapService.findOne(result.id);
+      
+      if (detailData && detailData.tree) {
+        return {
+          code: 200,
+          message: '思维导图生成成功',
+          data: this.convertToFrontendFormat(detailData.tree, language)
+        };
+      }
+    } else {
+      // 只生成思维导图数据，不保存到数据库
+      const treeData = await this.mindmapService.generateMindmapTree(
+        topic,
+        depth || 3
+      );
+      
+      if (treeData) {
+        return {
+          code: 200,
+          message: '思维导图生成成功',
+          data: this.convertToFrontendFormat(treeData, language)
+        };
+      }
     }
     
     throw new Error('未获取到有效的思维导图节点数据');

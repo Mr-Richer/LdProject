@@ -690,4 +690,84 @@ export class MindmapService {
       }
     }
   }
+
+  /**
+   * 根据章节ID查找思维导图
+   * @param {number} chapterId 章节ID
+   * @returns 思维导图列表
+   */
+  async findByChapter(chapterId: number) {
+    // 查询与章节关联的所有思维导图
+    const mindmaps = await this.mindmapRepository.find({
+      where: { chapter_id: chapterId, is_deleted: 0 },
+      order: { created_at: 'DESC' }
+    });
+    
+    // 格式化响应数据
+    return mindmaps.map(mindmap => ({
+      id: mindmap.id,
+      title: mindmap.title,
+      central_topic: mindmap.central_topic,
+      created_at: mindmap.created_at,
+      updated_at: mindmap.updated_at,
+      type: 'mindmap' // 添加类型字段，标识为思维导图类型的知识拓展
+    }));
+  }
+
+  /**
+   * 只生成思维导图树结构，不保存到数据库
+   * @param topic 主题
+   * @param maxLevels 最大层级
+   * @returns 思维导图树结构
+   */
+  async generateMindmapTree(topic: string, maxLevels: number = 3): Promise<any> {
+    try {
+      console.log(`生成思维导图树结构: ${topic}, 最大层级: ${maxLevels}`);
+      
+      // 构建思维导图树结构
+      let treeData = await this.buildMindmapTree(topic, maxLevels);
+      
+      if (!treeData) {
+        // 如果生成失败，使用基本结构
+        treeData = {
+          name: topic,
+          children: [
+            { name: '主要概念', children: [{ name: '概念1' }, { name: '概念2' }] },
+            { name: '历史背景', children: [{ name: '起源' }, { name: '发展' }] },
+            { name: '应用领域', children: [{ name: '领域1' }, { name: '领域2' }] },
+            { name: '相关知识', children: [{ name: '知识点1' }, { name: '知识点2' }] }
+          ]
+        };
+      }
+      
+      return treeData;
+    } catch (error) {
+      console.error('生成思维导图树结构失败:', error);
+      // 返回基本结构
+      return {
+        name: topic,
+        children: [
+          { name: '基本信息', children: [{ name: '定义' }, { name: '特点' }] },
+          { name: '相关内容', children: [{ name: '内容1' }, { name: '内容2' }] }
+        ]
+      };
+    }
+  }
+  
+  /**
+   * 构建思维导图树结构
+   * @param topic 主题
+   * @param maxLevels 最大层级
+   * @returns 思维导图树结构
+   */
+  private async buildMindmapTree(topic: string, maxLevels: number): Promise<any> {
+    try {
+      // 调用AI服务生成思维导图内容
+      const aiData = await this.generateMindmapTree(topic, maxLevels);
+      return aiData;
+    } catch (error) {
+      console.error('构建思维导图树失败:', error);
+      throw error;
+    }
+  }
 } 
